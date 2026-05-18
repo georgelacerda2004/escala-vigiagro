@@ -1,0 +1,29 @@
+# Blueprint do Render (deploy gratuito com URL fixa).
+# Banco: use um PostgreSQL externo gratuito e PERSISTENTE (Neon) e cole a
+# string de conexao em DATABASE_URL nas variaveis do servico.
+services:
+  - type: web
+    name: escala-vigiagro
+    runtime: node
+    plan: free
+    branch: main
+    healthCheckPath: /api/health
+    buildCommand: >-
+      cd backend && npm install &&
+      npx prisma generate --schema=prisma/schema.postgres.prisma &&
+      cd ../frontend && npm install && npm run build
+    startCommand: >-
+      cd backend &&
+      npx prisma db push --schema=prisma/schema.postgres.prisma --skip-generate &&
+      node src/seed.js && node src/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_EMAIL
+        value: admin@vigiagro.local
+      - key: ADMIN_PASSWORD
+        sync: false # defina no painel do Render (senha do admin)
+      - key: DATABASE_URL
+        sync: false # cole aqui a string do Neon (PostgreSQL)

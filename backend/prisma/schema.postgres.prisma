@@ -1,0 +1,115 @@
+// Schema para PRODUCAO/NUVEM (PostgreSQL). Modelos identicos ao schema.prisma
+// (SQLite local); muda apenas o datasource. Use em deploy:
+//   prisma generate --schema=prisma/schema.postgres.prisma
+//   prisma db push  --schema=prisma/schema.postgres.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           Int        @id @default(autoincrement())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("OPERATOR")
+  active       Boolean    @default(true)
+  personId     Int?       @unique
+  person       Person?    @relation(fields: [personId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  sigla     String?
+  descricao String?
+  people    Person[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Person {
+  id          Int               @id @default(autoincrement())
+  name        String            @unique
+  matricula   String?
+  teamId      Int?
+  team        Team?             @relation(fields: [teamId], references: [id])
+  active      Boolean           @default(true)
+  assignments ShiftAssignment[]
+  user        User?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([teamId])
+}
+
+model ShiftType {
+  id          Int               @id @default(autoincrement())
+  code        String            @unique
+  label       String
+  color       String?
+  hours       Float             @default(0)
+  assignments ShiftAssignment[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model ShiftAssignment {
+  id          Int        @id @default(autoincrement())
+  personId    Int
+  person      Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  date        DateTime
+  rawValue    String
+  hours       Float      @default(0)
+  shiftTypeId Int?
+  shiftType   ShiftType? @relation(fields: [shiftTypeId], references: [id])
+  monthSheet  String
+  contentHash String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([personId, date])
+  @@index([date])
+  @@index([monthSheet])
+}
+
+model SyncLog {
+  id                   Int      @id @default(autoincrement())
+  dataSync             DateTime @default(now())
+  fileName             String?
+  registrosImportados  Int      @default(0)
+  registrosAtualizados Int      @default(0)
+  registrosRemovidos   Int      @default(0)
+  status               String   @default("OK")
+  mensagem             String?
+  durationMs           Int      @default(0)
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String
+  entity    String?
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Settings {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

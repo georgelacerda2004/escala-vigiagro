@@ -1,0 +1,123 @@
+// Modelo de dados derivado da estrutura REAL da planilha (matriz de escala).
+// A planilha nao possui colunas Matricula/Setor/Supervisor; o "setor" e o
+// cabecalho de grupo (AFFA MV / AFFA EA / AFFA K9) e o "turno" e derivado
+// do codigo da celula via aba LEGENDA.
+//
+// Banco: SQLite (arquivo unico, sem servidor) para rodar localmente sem
+// instalacao extra. Para producao multiusuario pode-se migrar p/ PostgreSQL
+// (trocar provider e ajustar tipos/queries).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// SQLite no Prisma nao suporta enum: papel armazenado como texto.
+// Valores validos: ADMIN | SUPERVISOR | OPERATOR
+model User {
+  id           Int        @id @default(autoincrement())
+  name         String
+  email        String     @unique
+  passwordHash String
+  role         String     @default("OPERATOR")
+  active       Boolean    @default(true)
+  personId     Int?       @unique
+  person       Person?    @relation(fields: [personId], references: [id])
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  auditLogs    AuditLog[]
+}
+
+// "Setor"/equipe = linha de cabecalho de grupo na planilha (ex.: "AFFA MV")
+model Team {
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  sigla     String? // sigla de funcao p/ exibicao (AFA, MV, AA, AFA/EA)
+  descricao String? // descricao completa da funcao
+  people    Person[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Person {
+  id          Int               @id @default(autoincrement())
+  name        String            @unique
+  matricula   String? // ausente na planilha; reservado p/ uso futuro
+  teamId      Int?
+  team        Team?             @relation(fields: [teamId], references: [id])
+  active      Boolean           @default(true)
+  assignments ShiftAssignment[]
+  user        User?
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+
+  @@index([teamId])
+}
+
+// Vem da aba LEGENDA: SIGLA -> TIPO / COR / HORAS
+model ShiftType {
+  id          Int               @id @default(autoincrement())
+  code        String            @unique // SIGLA (ex.: "C", "f", "v", "l", "24")
+  label       String // TIPO (ex.: "24 HORAS", "FERIAS")
+  color       String? // COR (#hex)
+  hours       Float             @default(0)
+  assignments ShiftAssignment[]
+  createdAt   DateTime          @default(now())
+  updatedAt   DateTime          @updatedAt
+}
+
+model ShiftAssignment {
+  id          Int        @id @default(autoincrement())
+  personId    Int
+  person      Person     @relation(fields: [personId], references: [id], onDelete: Cascade)
+  date        DateTime
+  rawValue    String // valor bruto da celula (codigo ou numero)
+  hours       Float      @default(0)
+  shiftTypeId Int?
+  shiftType   ShiftType? @relation(fields: [shiftTypeId], references: [id])
+  monthSheet  String // aba de origem (ex.: "MAIO")
+  contentHash String // hash do conteudo, p/ deteccao de alteracao
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([personId, date])
+  @@index([date])
+  @@index([monthSheet])
+}
+
+model SyncLog {
+  id                   Int      @id @default(autoincrement())
+  dataSync             DateTime @default(now())
+  fileName             String?
+  registrosImportados  Int      @default(0)
+  registrosAtualizados Int      @default(0)
+  registrosRemovidos   Int      @default(0)
+  status               String   @default("OK") // OK | ERRO | PARCIAL
+  mensagem             String?
+  durationMs           Int      @default(0)
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  user      User?    @relation(fields: [userId], references: [id])
+  action    String // LOGIN | LOGOUT | IMPORT | UPDATE | ERROR | SYNC
+  entity    String?
+  detail    String?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  @@index([action])
+  @@index([createdAt])
+}
+
+model Settings {
+  id        Int      @id @default(autoincrement())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+}

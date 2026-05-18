@@ -1,0 +1,30 @@
+node_modules/
+dist/
+build/
+.env
+.env.local
+*.log
+logs/
+backend/logs/
+
+# dados / artefatos
+backups/*.sql
+backups/*.db
+excel/*.xlsx
+!excel/.gitkeep
+!backups/.gitkeep
+
+# Node portatil + cloudflared (nao versionar; ~35MB)
+.tools/
+
+# Banco SQLite local
+backend/prisma/*.db
+backend/prisma/*.db-journal
+
+# Credenciais geradas (NUNCA versionar)
+docs/SENHAS-NOVAS.md
+docs/USUARIOS.md
+
+.DS_Store
+.vscode/
+.idea/

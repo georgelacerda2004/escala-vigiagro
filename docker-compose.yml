@@ -1,0 +1,51 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: escala
+      POSTGRES_PASSWORD: escala
+      POSTGRES_DB: escala_gru
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U escala -d escala_gru"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://escala:escala@db:5432/escala_gru?schema=public
+      PORT: 4000
+      NODE_ENV: production
+      CORS_ORIGIN: http://localhost:8080
+      JWT_SECRET: troque-este-segredo-em-producao
+      ADMIN_EMAIL: admin@escala.local
+      ADMIN_PASSWORD: admin123
+      EXCEL_WATCH_DIR: /data/excel
+      BACKUP_DIR: /data/backups
+      PG_DUMP_BIN: pg_dump
+    volumes:
+      - ./excel:/data/excel
+      - ./backups:/data/backups
+    ports:
+      - "4000:4000"
+
+  frontend:
+    build: ./frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+
+volumes:
+  pgdata:

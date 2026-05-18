@@ -1,0 +1,3 @@
+# Coloque aqui a planilha .xlsx da escala.
+# O backend monitora esta pasta e reimporta automaticamente a cada alteracao.
+# O arquivo .xlsx em si nao e versionado (ver .gitignore).

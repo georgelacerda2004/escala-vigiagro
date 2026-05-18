@@ -1,0 +1,2 @@
+# Backups diarios do PostgreSQL (backup-YYYY-MM-DD.sql) sao gravados aqui.
+# Retencao: ultimos 30. Arquivos .sql nao sao versionados.

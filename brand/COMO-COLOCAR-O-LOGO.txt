@@ -1,0 +1,15 @@
+COMO COLOCAR O BRASAO DO VIGIAGRO
+
+1. Salve a imagem do brasao DENTRO desta pasta:
+   C:\Users\Vigiagro\escala-gru\brand\
+
+   - Pode ser PNG, JPG, WEBP ou SVG.
+   - O NOME pode ser qualquer um (ex.: brasao.png, vigiagro.jpg...).
+   - De preferencia uma imagem quadrada, fundo transparente (PNG).
+
+2. Atualize a pagina no navegador com Ctrl+F5.
+   O brasao aparece no login e no menu lateral.
+
+Nao precisa recompilar nem reiniciar nada.
+Se houver mais de uma imagem, o sistema usa a que tiver
+"logo"/"vigiagro"/"brasao" no nome (ou a primeira em ordem).
