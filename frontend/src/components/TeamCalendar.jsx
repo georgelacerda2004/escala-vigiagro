@@ -27,17 +27,25 @@ function groupNotesByDay(notes) {
   return m;
 }
 
-// Servidores K9 escalados no dia (codigo do plantao != ausencia).
-const ABSENT_CODES = new Set(['f', 'l', 'v', 'c']);
+// Servidores K9 efetivamente escalados no dia (ignora ausentes).
 function k9Operators(list) {
   if (!list) return [];
-  return list.filter(
-    (p) => /K9/i.test(p.sigla || '') && !ABSENT_CODES.has((p.codigo || '').toLowerCase())
-  );
+  return list.filter((p) => /K9/i.test(p.sigla || '') && !p.ausente);
 }
 
 function Chip({ p, small }) {
   const is12 = p.regime === '12h';
+  if (p.ausente) {
+    return (
+      <span
+        title={`${p.pessoa} — ${p.motivoAusencia || 'ausente'}`}
+        className={`block truncate rounded border border-dashed border-slate-300 bg-slate-100 px-1 italic text-slate-500 dark:border-slate-700 dark:bg-slate-800/50 dark:text-slate-400 ${small ? 'text-[10px] leading-4' : 'text-[11px] leading-5'}`}
+      >
+        {p.pessoa}
+        <span className="opacity-70"> · {p.motivoAusencia || 'ausente'}</span>
+      </span>
+    );
+  }
   return (
     <span
       title={`${p.pessoa} · ${p.sigla || ''} · ${p.tipo} · ${p.horario}`}

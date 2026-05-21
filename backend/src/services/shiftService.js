@@ -1,7 +1,10 @@
 import { prisma } from '../config/prisma.js';
 import { shiftWindow, regimeOf, next21, is12h } from './shiftRules.js';
 
-const ABSENT = new Set(['f', 'l', 'v']); // ferias / licenca / viagem
+const ABSENT = new Set(['f', 'l', 'v', 'c']); // ferias / licenca / viagem / compromisso
+
+// Rotulo amigavel por codigo de ausencia para exibir no calendario.
+const ABSENT_LABEL = { f: 'Férias', l: 'Licença', v: 'Viagem', c: 'Compromisso' };
 
 // Data "pura" YYYY-MM-DD a partir dos componentes UTC (a data e salva como
 // meia-noite UTC). Evita o deslocamento de -1 dia no fuso do Brasil (UTC-3).
@@ -20,6 +23,8 @@ function isRealShift(a) {
 // Acrescenta regime/horario/sigla a uma atribuicao.
 function enrich(a) {
   const w = shiftWindow(a.person.name, a.date);
+  const code = (a.shiftType?.code || a.rawValue || '').toLowerCase();
+  const ausente = ABSENT.has(code);
   return {
     id: a.id,
     date: ymd(a.date), // string YYYY-MM-DD (sem fuso)
@@ -36,6 +41,8 @@ function enrich(a) {
     horario: w.horario,
     inicio: w.start,
     fim: w.end,
+    ausente,
+    motivoAusencia: ausente ? ABSENT_LABEL[code] || 'Ausente' : null,
   };
 }
 

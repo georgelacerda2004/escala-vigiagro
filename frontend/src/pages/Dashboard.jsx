@@ -86,8 +86,10 @@ export default function Dashboard() {
 
   // Detalhes do dia selecionado (filtra dos dados ja carregados)
   const dayItems = (sched?.items || []).filter((i) => i.date === selectedDate);
-  const dayPrincipais = dayItems.filter((p) => !/K9/i.test(p.sigla || ''));
-  const dayK9 = dayItems.filter((p) => /K9/i.test(p.sigla || ''));
+  const dayNonK9 = dayItems.filter((p) => !/K9/i.test(p.sigla || ''));
+  const dayPrincipais = dayNonK9.filter((p) => !p.ausente);
+  const dayAusentes = dayNonK9.filter((p) => p.ausente);
+  const dayK9 = dayItems.filter((p) => /K9/i.test(p.sigla || '') && !p.ausente);
   const dayVoos = (sched?.dayNotes || []).filter(
     (n) => n.date === selectedDate && /K9/i.test(n.teamSigla || '')
   );
@@ -252,6 +254,14 @@ export default function Dashboard() {
                     ))}
                   </div>
                 </>
+              )}
+              {dayAusentes.length > 0 && (
+                <div className="mt-3 text-xs text-slate-500 dark:text-slate-400">
+                  <span className="font-semibold">Ausentes:</span>{' '}
+                  {dayAusentes
+                    .map((p) => `${p.pessoa} (${p.motivoAusencia || 'ausente'})`)
+                    .join(', ')}
+                </div>
               )}
             </div>
             {(dayK9.length > 0 || dayVoos.length > 0) && (
