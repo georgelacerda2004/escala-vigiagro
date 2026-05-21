@@ -56,7 +56,7 @@ function Chip({ p, small }) {
 
 const todayStr = () => dayjs().format('YYYY-MM-DD');
 
-function DayCell({ date, list, notes, minH = 90 }) {
+function DayCell({ date, list, notes, minH = 90, onClick, selected }) {
   const d = dayjs(date);
   const isToday = date === todayStr();
   // Foco principal: plantonistas que NAO sao da equipe K9.
@@ -64,13 +64,17 @@ function DayCell({ date, list, notes, minH = 90 }) {
   const operadoresK9 = k9Operators(list);
   const k9Notes = (notes || []).filter((n) => /K9/i.test(n.teamSigla || ''));
   const temK9 = operadoresK9.length > 0 || k9Notes.length > 0;
+  const Wrapper = onClick ? 'button' : 'div';
+  const ringCls = selected
+    ? 'border-amber-500 ring-2 ring-amber-400/60'
+    : isToday
+      ? 'border-brand-600 ring-2 ring-brand-500/40'
+      : 'border-slate-200 dark:border-slate-800';
   return (
-    <div
-      className={`rounded-lg border p-1.5 ${
-        isToday
-          ? 'border-brand-600 ring-2 ring-brand-500/40'
-          : 'border-slate-200 dark:border-slate-800'
-      }`}
+    <Wrapper
+      type={onClick ? 'button' : undefined}
+      onClick={onClick ? () => onClick(date) : undefined}
+      className={`w-full rounded-lg border p-1.5 text-left ${ringCls} ${onClick ? 'cursor-pointer transition hover:border-brand-500 hover:shadow' : ''}`}
       style={{ minHeight: minH }}
     >
       <div className="mb-1 flex items-center justify-between">
@@ -111,11 +115,11 @@ function DayCell({ date, list, notes, minH = 90 }) {
           </div>
         )}
       </div>
-    </div>
+    </Wrapper>
   );
 }
 
-export default function TeamCalendar({ items, dayNotes, mode, cursor, onPickMonth }) {
+export default function TeamCalendar({ items, dayNotes, mode, cursor, onPickMonth, onDayClick, selectedDate }) {
   const byDay = useMemo(() => groupByDay(items), [items]);
   const notesByDay = useMemo(() => groupNotesByDay(dayNotes), [dayNotes]);
 
@@ -124,15 +128,20 @@ export default function TeamCalendar({ items, dayNotes, mode, cursor, onPickMont
     const days = Array.from({ length: 7 }, (_, i) => start.add(i, 'day'));
     return (
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-7">
-        {days.map((d) => (
-          <DayCell
-            key={d.format('YYYY-MM-DD')}
-            date={d.format('YYYY-MM-DD')}
-            list={byDay.get(d.format('YYYY-MM-DD'))}
-            notes={notesByDay.get(d.format('YYYY-MM-DD'))}
-            minH={140}
-          />
-        ))}
+        {days.map((d) => {
+          const k = d.format('YYYY-MM-DD');
+          return (
+            <DayCell
+              key={k}
+              date={k}
+              list={byDay.get(k)}
+              notes={notesByDay.get(k)}
+              minH={140}
+              onClick={onDayClick}
+              selected={selectedDate === k}
+            />
+          );
+        })}
       </div>
     );
   }
@@ -154,18 +163,20 @@ export default function TeamCalendar({ items, dayNotes, mode, cursor, onPickMont
             ))}
           </div>
           <div className="grid grid-cols-7 gap-2">
-            {cells.map((d, i) =>
-              d ? (
+            {cells.map((d, i) => {
+              if (!d) return <div key={`e${i}`} />;
+              const k = d.format('YYYY-MM-DD');
+              return (
                 <DayCell
-                  key={d.format('YYYY-MM-DD')}
-                  date={d.format('YYYY-MM-DD')}
-                  list={byDay.get(d.format('YYYY-MM-DD'))}
-                  notes={notesByDay.get(d.format('YYYY-MM-DD'))}
+                  key={k}
+                  date={k}
+                  list={byDay.get(k)}
+                  notes={notesByDay.get(k)}
+                  onClick={onDayClick}
+                  selected={selectedDate === k}
                 />
-              ) : (
-                <div key={`e${i}`} />
-              )
-            )}
+              );
+            })}
           </div>
         </div>
       </div>

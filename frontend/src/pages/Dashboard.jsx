@@ -36,6 +36,7 @@ export default function Dashboard() {
   const qc = useQueryClient();
   const [mode, setMode] = useState('semana'); // semana | mes | ano
   const [cursor, setCursor] = useState(dayjs());
+  const [selectedDate, setSelectedDate] = useState(dayjs().format('YYYY-MM-DD'));
 
   const { data: sum } = useQuery({
     queryKey: ['dashboard'],
@@ -82,6 +83,16 @@ export default function Dashboard() {
     const unit = mode === 'semana' ? 'week' : mode === 'mes' ? 'month' : 'year';
     setCursor((c) => c.add(dir, unit));
   };
+
+  // Detalhes do dia selecionado (filtra dos dados ja carregados)
+  const dayItems = (sched?.items || []).filter((i) => i.date === selectedDate);
+  const dayPrincipais = dayItems.filter((p) => !/K9/i.test(p.sigla || ''));
+  const dayK9 = dayItems.filter((p) => /K9/i.test(p.sigla || ''));
+  const dayVoos = (sched?.dayNotes || []).filter(
+    (n) => n.date === selectedDate && /K9/i.test(n.teamSigla || '')
+  );
+  const isSelectedToday = selectedDate === dayjs().format('YYYY-MM-DD');
+  const selectedLabel = dayjs(selectedDate).format('dddd, DD/MM/YYYY');
 
   const titulo =
     mode === 'semana'
@@ -203,6 +214,84 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* Detalhes do dia selecionado */}
+      <div id="detalhes-dia" className="card border-l-4 border-amber-500">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold capitalize">
+              {isSelectedToday ? `Hoje · ${selectedLabel}` : selectedLabel}
+            </h2>
+            {!isSelectedToday && (
+              <button
+                className="rounded-full bg-slate-100 px-2 py-0.5 text-xs hover:bg-brand-100 dark:bg-slate-800 dark:hover:bg-brand-900"
+                onClick={() => setSelectedDate(dayjs().format('YYYY-MM-DD'))}
+              >
+                ← voltar p/ hoje
+              </button>
+            )}
+          </div>
+          <span className="text-xs text-slate-400">
+            clique em outro dia abaixo para trocar
+          </span>
+        </div>
+        {dayItems.length === 0 && dayVoos.length === 0 ? (
+          <EmptyState>Nenhum plantonista ou voo registrado neste dia.</EmptyState>
+        ) : (
+          <div className="flex flex-col gap-4 md:flex-row md:gap-6">
+            <div className="flex-1">
+              {dayPrincipais.length === 0 ? (
+                <p className="text-sm text-slate-400">Nenhum plantonista (24h/12h) neste dia.</p>
+              ) : (
+                <>
+                  <p className="mb-2 text-sm text-slate-600 dark:text-slate-300">
+                    Plantonistas:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {dayPrincipais.map((p) => (
+                      <PersonChip key={p.id} p={p} />
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            {(dayK9.length > 0 || dayVoos.length > 0) && (
+              <aside className="w-full shrink-0 rounded-lg border border-amber-300 bg-amber-50/60 px-3 py-2 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200 md:w-80">
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-wide opacity-80">
+                  K9
+                </div>
+                {dayK9.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {dayK9.map((p) => (
+                      <span
+                        key={p.id}
+                        className="rounded-full bg-amber-200/70 px-2 py-0.5 text-xs font-medium dark:bg-amber-800/40"
+                        title={`${p.funcao || ''} · ${p.horario || ''}`}
+                      >
+                        {p.pessoa}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs opacity-70">Sem servidor escalado.</div>
+                )}
+                {dayVoos.length > 0 && (
+                  <div className="mt-2 space-y-0.5 text-xs leading-5">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide opacity-60">
+                      Voos sugeridos
+                    </div>
+                    {dayVoos.flatMap((n) =>
+                      n.text.split('\n').map((line, i) => (
+                        <div key={`${n.id}-${i}`}>• {line}</div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </aside>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Calendario da equipe */}
       <div className="card">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -249,6 +338,11 @@ export default function Dashboard() {
             dayNotes={sched?.dayNotes || []}
             mode={mode}
             cursor={cursor}
+            selectedDate={selectedDate}
+            onDayClick={(d) => {
+              setSelectedDate(d);
+              document.getElementById('detalhes-dia')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }}
             onPickMonth={(d) => {
               setCursor(d);
               setMode('mes');
