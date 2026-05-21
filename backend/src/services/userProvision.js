@@ -9,7 +9,7 @@ import { env } from '../config/env.js';
 export function slugLogin(name) {
   return String(name || '')
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
+    .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 }
