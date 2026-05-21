@@ -70,9 +70,15 @@ export async function syncFromFile(filePath) {
     if (novosUsuarios) logger.info(`[sync] ${novosUsuarios} novo(s) usuario(s) de servidor criado(s)`);
 
     // 4) Atribuicoes (diff por personId+date) - em lote para performance.
-    const existing = await prisma.shiftAssignment.findMany({
-      select: { id: true, personId: true, date: true, contentHash: true },
-    });
+    // Considera apenas as pessoas tocadas por ESTA planilha. Assim, importar a
+    // planilha K9 nao apaga atribuicoes da ALA (e vice-versa).
+    const touchedPersonIds = [...new Set(personByName.values())];
+    const existing = touchedPersonIds.length
+      ? await prisma.shiftAssignment.findMany({
+          where: { personId: { in: touchedPersonIds } },
+          select: { id: true, personId: true, date: true, contentHash: true },
+        })
+      : [];
     const key = (pid, d) => `${pid}|${d.toISOString().slice(0, 10)}`;
     const existingMap = new Map(existing.map((e) => [key(e.personId, e.date), e]));
     const seen = new Set();
