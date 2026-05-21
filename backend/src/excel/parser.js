@@ -4,15 +4,21 @@ import { excelSerialToDate, isPlausibleDateSerial } from '../utils/excelDate.js'
 import { logger } from '../config/logger.js';
 
 const MONTHS = [
-  'JANEIRO', 'FEVEREIRO', 'MARCO', 'MARÇO', 'ABRIL', 'MAIO', 'JUNHO',
+  'JANEIRO', 'FEVEREIRO', 'MARCO', 'MARÃ‡O', 'ABRIL', 'MAIO', 'JUNHO',
   'JULHO', 'AGOSTO', 'SETEMBRO', 'OUTUBRO', 'NOVEMBRO', 'DEZEMBRO',
 ];
 
-// Rotulos que NUNCA sao pessoas, mesmo aparecendo na coluna A.
 const NON_PERSON = new Set([
   'TOTAL', 'TOTAL DE HORAS', 'LEGENDA', 'DATA INICIAL', 'DATA FINAL',
-  'FERIADOS', 'OBS', 'OBSERVACOES', 'OBSERVAÇÕES', 'BANCO DE HORAS',
+  'FERIADOS', 'OBS', 'OBSERVACOES', 'OBSERVAÃ‡Ã•ES', 'BANCO DE HORAS',
+  'VOOS SUGERIDOS', 'VOOS REALIZADOS',
 ]);
+
+const STOP_LABELS = new Set([
+  'VOOS SUGERIDOS', 'VOOS REALIZADOS', 'OBSERVACOES', 'OBSERVAÃ‡Ã•ES',
+]);
+
+const TEAM_HINT_RE = /^(EQUIPE\b|AFF?A\b)|\bK9\b/i;
 
 const norm = (v) => String(v ?? '').replace(/\s+/g, ' ').trim();
 const upper = (v) => norm(v).toUpperCase();
@@ -21,7 +27,6 @@ function sha1(s) {
   return crypto.createHash('sha1').update(s).digest('hex');
 }
 
-/** Le a aba LEGENDA: TIPO(A) | COR(B) | SIGLA(C) | HORAS(D) */
 function parseLegend(wb, legendSheetName) {
   const sheet = wb.Sheets[legendSheetName] || wb.Sheets[wb.SheetNames.find((n) => upper(n) === upper(legendSheetName))];
   const out = [];
@@ -30,24 +35,50 @@ function parseLegend(wb, legendSheetName) {
     return out;
   }
   const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
+  if (!rows.length) return out;
+
+  const header = (rows[0] || []).map((v) => upper(v));
+  let codeCol = 2;
+  let hoursCol = 3;
+  let labelCol = 0;
+  let colorCol = 1;
+  if (header[0] === 'LEGENDA') {
+    codeCol = 0;
+    labelCol = 1;
+    hoursCol = 2;
+    colorCol = 3;
+  } else if (header[2] !== 'SIGLA') {
+    const sample = rows.slice(1, 8);
+    const isShortCode = (v) => {
+      const s = norm(v);
+      return s.length >= 1 && s.length <= 3;
+    };
+    const score = (c) => sample.reduce((acc, r) => acc + (r && isShortCode(r[c]) ? 1 : 0), 0);
+    if (score(0) > score(2)) {
+      codeCol = 0;
+      labelCol = 1;
+      hoursCol = 2;
+      colorCol = 3;
+    }
+  }
+
   for (let i = 1; i < rows.length; i++) {
     const r = rows[i] || [];
-    const label = norm(r[0]);
-    const color = norm(r[1]) || null;
-    const codeRaw = r[2];
-    const hoursRaw = r[3];
+    const codeRaw = r[codeCol];
     if (codeRaw === null || codeRaw === undefined || norm(codeRaw) === '') continue;
     const code = norm(codeRaw);
+    const label = norm(r[labelCol]) || code;
+    const color = norm(r[colorCol]) || null;
+    const hoursRaw = r[hoursCol];
     const hours = typeof hoursRaw === 'number' ? hoursRaw : Number(hoursRaw) || 0;
-    out.push({ code, label: label || code, color, hours });
+    out.push({ code, label, color, hours });
   }
   return out;
 }
 
-/** Acha a linha (indice 0-based) que contem mais seriais de data plausiveis. */
 function findDateRow(rows) {
   let best = { idx: -1, count: 0 };
-  const limit = Math.min(rows.length, 30); // cabecalho fica no topo da aba
+  const limit = Math.min(rows.length, 30);
   for (let i = 0; i < limit; i++) {
     const r = rows[i] || [];
     let count = 0;
@@ -75,8 +106,7 @@ function rowHasDayValues(row, dateCols) {
   return false;
 }
 
-/** Parseia uma aba mensal (matriz pessoa x dia). */
-function parseMonthSheet(wb, sheetName, legendByCode) {
+function parseMonthSheet(wb, sheetName, legendByCode, peopleSeenGlobal) {
   const sheet = wb.Sheets[sheetName];
   const rows = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: true, defval: null });
 
@@ -87,7 +117,7 @@ function parseMonthSheet(wb, sheetName, legendByCode) {
   }
 
   const headerRow = rows[dateRow.idx];
-  const colDate = new Map(); // colIndex -> Date
+  const colDate = new Map();
   for (let c = 1; c < headerRow.length; c++) {
     if (isPlausibleDateSerial(headerRow[c])) {
       const d = excelSerialToDate(headerRow[c]);
@@ -105,21 +135,29 @@ function parseMonthSheet(wb, sheetName, legendByCode) {
     const r = rows[i] || [];
     const a = norm(r[0]);
 
-    // pula linhas de data duplicadas
+    if (a && STOP_LABELS.has(upper(a))) break;
+
     if (rowIsDateRow(r, dateCols)) continue;
 
     const hasValues = rowHasDayValues(r, dateCols);
 
     if (a && !hasValues) {
-      // cabecalho de grupo/equipe (ex.: "AFFA MV") ou rotulo de resumo
-      if (!NON_PERSON.has(upper(a))) currentTeam = a;
+      if (NON_PERSON.has(upper(a))) continue;
+      if (peopleSeenGlobal && peopleSeenGlobal.has(a)) continue;
+      currentTeam = a;
       continue;
     }
-    if (!a) continue; // sem nome -> ignora
+    if (a && TEAM_HINT_RE.test(a) && !(peopleSeenGlobal && peopleSeenGlobal.has(a))) {
+      currentTeam = a;
+      continue;
+    }
+    if (!a) continue;
     if (NON_PERSON.has(upper(a))) continue;
+    if (/^\d+\)?$/.test(a)) continue;
 
     const personName = a;
     people.add(personName);
+    if (peopleSeenGlobal) peopleSeenGlobal.add(personName);
     if (currentTeam) teams.add(currentTeam);
 
     for (const c of dateCols) {
@@ -150,10 +188,6 @@ function parseMonthSheet(wb, sheetName, legendByCode) {
   return { assignments, teams, people };
 }
 
-/**
- * Parseia o workbook inteiro.
- * @returns {{legend:Array, assignments:Array, teams:string[], people:string[], months:string[], stats:object}}
- */
 export function parseWorkbook(filePath, legendSheetName = 'LEGENDA') {
   const wb = xlsx.readFile(filePath, { cellDates: false, cellFormula: false });
 
@@ -164,7 +198,6 @@ export function parseWorkbook(filePath, legendSheetName = 'LEGENDA') {
   const monthNames = wb.SheetNames.filter(
     (n) => upper(n) !== upper(legendSheetName) && MONTHS.includes(upper(n))
   );
-  // fallback: se nenhum nome bater, usa todas exceto a legenda
   const sheetsToParse = monthNames.length
     ? monthNames
     : wb.SheetNames.filter((n) => upper(n) !== upper(legendSheetName));
@@ -172,10 +205,11 @@ export function parseWorkbook(filePath, legendSheetName = 'LEGENDA') {
   const allAssignments = [];
   const teams = new Set();
   const people = new Set();
+  const peopleSeenGlobal = new Set();
 
   for (const name of sheetsToParse) {
     try {
-      const res = parseMonthSheet(wb, name, legendByCode);
+      const res = parseMonthSheet(wb, name, legendByCode, peopleSeenGlobal);
       allAssignments.push(...res.assignments);
       res.teams.forEach((t) => teams.add(t));
       res.people.forEach((p) => people.add(p));
