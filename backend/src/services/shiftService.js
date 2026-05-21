@@ -65,7 +65,9 @@ export async function listShifts(q = {}) {
   const take = Math.min(Number(q.limit) || 1000, 5000);
   const skip = Number(q.offset) || 0;
 
-  const [rows, total] = await Promise.all([
+  const noteWhere = dr ? { date: dr } : q.date ? { date: new Date(q.date) } : {};
+
+  const [rows, total, notes] = await Promise.all([
     prisma.shiftAssignment.findMany({
       where,
       include: { person: { include: { team: true } }, shiftType: true },
@@ -74,8 +76,18 @@ export async function listShifts(q = {}) {
       skip,
     }),
     prisma.shiftAssignment.count({ where }),
+    prisma.dayNote.findMany({
+      where: noteWhere,
+      orderBy: [{ date: 'asc' }, { teamSigla: 'asc' }],
+    }),
   ]);
-  return { items: rows.map(enrich), total, take, skip };
+  const dayNotes = notes.map((n) => ({
+    id: n.id,
+    date: ymd(n.date),
+    teamSigla: n.teamSigla,
+    text: n.text,
+  }));
+  return { items: rows.map(enrich), dayNotes, total, take, skip };
 }
 
 export async function dashboardSummary() {

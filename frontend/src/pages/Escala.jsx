@@ -59,6 +59,7 @@ export default function Escala() {
   }, [qc]);
 
   const items = data?.items || [];
+  const dayNotes = data?.dayNotes || [];
   const filtered = useMemo(() => {
     if (!search) return items;
     const q = search.toLowerCase();
@@ -254,6 +255,7 @@ export default function Escala() {
           ) : (
             <TeamCalendar
               items={filtered}
+              dayNotes={dayNotes}
               mode={calMode}
               cursor={cursor}
               onPickMonth={(d) => {

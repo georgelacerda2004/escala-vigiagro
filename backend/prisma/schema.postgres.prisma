@@ -113,3 +113,16 @@ model Settings {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+model DayNote {
+  id         Int      @id @default(autoincrement())
+  date       DateTime
+  teamSigla  String
+  text       String
+  monthSheet String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([date, teamSigla])
+  @@index([date])
+}
