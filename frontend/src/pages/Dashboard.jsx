@@ -108,20 +108,62 @@ export default function Dashboard() {
         </div>
         {!sum ? (
           <Spinner />
-        ) : sum.plantaoAtual.length === 0 ? (
+        ) : sum.plantaoAtual.length === 0 && (!sum.plantaoK9 || sum.plantaoK9.length === 0) ? (
           <EmptyState>Ninguém em plantão neste momento.</EmptyState>
         ) : (
-          <>
-            <p className="mb-3 text-slate-600 dark:text-slate-300">
-              <b>{listNames(sum.plantaoAtual)}</b>{' '}
-              {sum.plantaoAtual.length > 1 ? 'estão' : 'está'} de plantão agora.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {sum.plantaoAtual.map((p) => (
-                <PersonChip key={p.id} p={p} />
-              ))}
+          <div className="flex flex-col gap-4 md:flex-row md:gap-6">
+            <div className="flex-1">
+              {sum.plantaoAtual.length === 0 ? (
+                <p className="text-sm text-slate-400">Ninguém de 24h em plantão.</p>
+              ) : (
+                <>
+                  <p className="mb-3 text-slate-600 dark:text-slate-300">
+                    <b>{listNames(sum.plantaoAtual)}</b>{' '}
+                    {sum.plantaoAtual.length > 1 ? 'estão' : 'está'} de plantão agora.
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {sum.plantaoAtual.map((p) => (
+                      <PersonChip key={p.id} p={p} />
+                    ))}
+                  </div>
+                </>
+              )}
             </div>
-          </>
+            {(sum.plantaoK9?.length > 0 || sum.voosHoje?.length > 0) && (
+              <aside className="w-full shrink-0 rounded-lg border border-amber-300 bg-amber-50/60 px-3 py-2 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200 md:w-72">
+                <div className="mb-1 text-[11px] font-bold uppercase tracking-wide opacity-80">
+                  K9 hoje
+                </div>
+                {sum.plantaoK9?.length > 0 ? (
+                  <div className="flex flex-wrap gap-1">
+                    {sum.plantaoK9.map((p) => (
+                      <span
+                        key={p.id}
+                        className="rounded-full bg-amber-200/70 px-2 py-0.5 text-xs font-medium dark:bg-amber-800/40"
+                        title={`${p.funcao || ''} · ${p.horario || ''}`}
+                      >
+                        {p.pessoa}
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-xs opacity-70">Sem escalado.</div>
+                )}
+                {sum.voosHoje?.length > 0 && (
+                  <div className="mt-2 space-y-0.5 text-[11px] leading-4 opacity-90">
+                    <div className="text-[10px] font-semibold uppercase tracking-wide opacity-60">
+                      Voos sugeridos
+                    </div>
+                    {sum.voosHoje.flatMap((n) =>
+                      n.text.split('\n').map((line, i) => (
+                        <div key={`${n.id}-${i}`}>{line}</div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </aside>
+            )}
+          </div>
         )}
       </div>
 
@@ -204,6 +246,7 @@ export default function Dashboard() {
         ) : (
           <TeamCalendar
             items={sched?.items || []}
+            dayNotes={sched?.dayNotes || []}
             mode={mode}
             cursor={cursor}
             onPickMonth={(d) => {

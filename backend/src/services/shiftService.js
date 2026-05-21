@@ -113,19 +113,21 @@ export async function dashboardSummary() {
   const reais = around.filter(isRealShift).map(enrich);
   const proxTroca = next21(now);
 
+  const isK9 = (r) => /K9/i.test(r.sigla || '');
+
   const plantaoAtual = reais
-    .filter((r) => now >= r.inicio && now < r.fim)
+    .filter((r) => now >= r.inicio && now < r.fim && !isK9(r))
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
   const entram21h = reais
-    .filter((r) => r.regime === '24h' && r.inicio.getTime() === proxTroca.getTime())
+    .filter((r) => r.regime === '24h' && !isK9(r) && r.inicio.getTime() === proxTroca.getTime())
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
   // 12h (Damata/Thiago) que iniciam na proxima manha 09h
   const prox09 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0);
   if (now >= prox09) prox09.setDate(prox09.getDate() + 1);
   const entram09h = reais
-    .filter((r) => r.regime === '12h' && r.inicio.getTime() === prox09.getTime())
+    .filter((r) => r.regime === '12h' && !isK9(r) && r.inicio.getTime() === prox09.getTime())
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
   const todayYmd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
@@ -133,6 +135,23 @@ export async function dashboardSummary() {
   ).padStart(2, '0')}`;
 
   const hojeReais = reais.filter((r) => r.date === todayYmd);
+
+  // Servidores K9 escalados hoje (sem horario de troca, regime distinto)
+  const plantaoK9 = hojeReais
+    .filter(isK9)
+    .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
+
+  // Voos / observacoes do K9 para hoje
+  const todayDateUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+  const voosHojeRaw = await prisma.dayNote.findMany({
+    where: { date: todayDateUtc },
+    orderBy: [{ teamSigla: 'asc' }],
+  });
+  const voosHoje = voosHojeRaw.map((n) => ({
+    id: n.id,
+    teamSigla: n.teamSigla,
+    text: n.text,
+  }));
   const ausencias = around.filter(
     (a) => ymd(a.date) === todayYmd && ABSENT.has(a.shiftType?.code)
   ).length;
@@ -153,6 +172,8 @@ export async function dashboardSummary() {
     plantoesHoje: hojeReais.length,
     ausencias,
     plantaoAtual,
+    plantaoK9,
+    voosHoje,
     entram21h,
     entram09h,
     porTurno: [...porTurnoMap.entries()].map(([tipo, total]) => ({ tipo, total })),

@@ -27,14 +27,13 @@ function groupNotesByDay(notes) {
   return m;
 }
 
-// Servidor da equipe K9 escalado no dia (codigo do plantao != ausencia).
+// Servidores K9 escalados no dia (codigo do plantao != ausencia).
 const ABSENT_CODES = new Set(['f', 'l', 'v', 'c']);
-function k9Operator(list) {
-  if (!list) return null;
-  const k9 = list.find(
+function k9Operators(list) {
+  if (!list) return [];
+  return list.filter(
     (p) => /K9/i.test(p.sigla || '') && !ABSENT_CODES.has((p.codigo || '').toLowerCase())
   );
-  return k9 || null;
 }
 
 function Chip({ p, small }) {
@@ -62,9 +61,9 @@ function DayCell({ date, list, notes, minH = 90 }) {
   const isToday = date === todayStr();
   // Foco principal: plantonistas que NAO sao da equipe K9.
   const principais = (list || []).filter((p) => !/K9/i.test(p.sigla || ''));
-  const operadorK9 = k9Operator(list);
+  const operadoresK9 = k9Operators(list);
   const k9Notes = (notes || []).filter((n) => /K9/i.test(n.teamSigla || ''));
-  const temK9 = !!operadorK9 || k9Notes.length > 0;
+  const temK9 = operadoresK9.length > 0 || k9Notes.length > 0;
   return (
     <div
       className={`rounded-lg border p-1.5 ${
@@ -92,14 +91,16 @@ function DayCell({ date, list, notes, minH = 90 }) {
           <div
             className="w-[42%] shrink-0 rounded border-l border-amber-300 bg-amber-50/60 px-1 py-0.5 text-[9px] leading-3 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200"
             title={
-              (operadorK9 ? `K9: ${operadorK9.pessoa}\n` : '') +
+              (operadoresK9.length ? `K9: ${operadoresK9.map((p) => p.pessoa).join(', ')}\n` : '') +
               k9Notes.map((n) => n.text).join('\n')
             }
           >
             <div className="mb-0.5 font-bold uppercase tracking-wide opacity-70">K9</div>
-            {operadorK9 && (
-              <div className="truncate font-semibold">{operadorK9.pessoa}</div>
-            )}
+            {operadoresK9.map((p) => (
+              <div key={p.id} className="truncate font-semibold">
+                {p.pessoa}
+              </div>
+            ))}
             {k9Notes.map((n) =>
               n.text.split('\n').map((line, idx) => (
                 <div key={`${n.id}-${idx}`} className="truncate opacity-80">
