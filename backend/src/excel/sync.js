@@ -9,10 +9,6 @@ import { ensureUsersForPeople } from '../services/userProvision.js';
 
 let running = false;
 
-/**
- * Sincronizacao inteligente: nao duplica, atualiza apenas o que mudou,
- * remove atribuicoes que sumiram da planilha, registra SyncLog.
- */
 export async function syncFromFile(filePath) {
   if (running) {
     logger.warn('[sync] ja em execucao, ignorando chamada concorrente');
@@ -29,7 +25,6 @@ export async function syncFromFile(filePath) {
     logger.info(`[sync] lendo ${fileName}`);
     const data = parseWorkbook(filePath, env.excel.legendSheet);
 
-    // 1) Legenda -> ShiftType
     for (const l of data.legend) {
       await prisma.shiftType.upsert({
         where: { code: l.code },
@@ -40,7 +35,6 @@ export async function syncFromFile(filePath) {
     const shiftTypes = await prisma.shiftType.findMany();
     const typeByCode = new Map(shiftTypes.map((t) => [t.code, t]));
 
-    // 2) Equipes
     const teamByName = new Map();
     for (const name of data.teams) {
       const { sigla, descricao } = mapTeam(name);
@@ -52,7 +46,6 @@ export async function syncFromFile(filePath) {
       teamByName.set(name, t.id);
     }
 
-    // 3) Pessoas
     const personByName = new Map();
     for (const a of data.assignments) {
       if (personByName.has(a.personName)) continue;
@@ -65,55 +58,54 @@ export async function syncFromFile(filePath) {
       personByName.set(a.personName, p.id);
     }
 
-    // 3b) Garante um usuario (login) por servidor
     const novosUsuarios = await ensureUsersForPeople();
     if (novosUsuarios) logger.info(`[sync] ${novosUsuarios} novo(s) usuario(s) de servidor criado(s)`);
 
-    // 4) Atribuicoes (diff por personId+date)
     const existing = await prisma.shiftAssignment.findMany({
       select: { id: true, personId: true, date: true, contentHash: true },
     });
     const key = (pid, d) => `${pid}|${d.toISOString().slice(0, 10)}`;
     const existingMap = new Map(existing.map((e) => [key(e.personId, e.date), e]));
     const seen = new Set();
+    const toCreate = [];
+    const toUpdate = [];
 
     for (const a of data.assignments) {
       const personId = personByName.get(a.personName);
       if (!personId || !a.date) continue;
       const k = key(personId, a.date);
+      if (seen.has(k)) continue;
       seen.add(k);
       const shiftTypeId = typeByCode.get(a.code)?.id ?? null;
       const prev = existingMap.get(k);
-
+      const row = {
+        personId,
+        date: a.date,
+        rawValue: a.rawValue,
+        hours: a.hours,
+        shiftTypeId,
+        monthSheet: a.monthSheet,
+        contentHash: a.contentHash,
+      };
       if (!prev) {
-        await prisma.shiftAssignment.create({
-          data: {
-            personId,
-            date: a.date,
-            rawValue: a.rawValue,
-            hours: a.hours,
-            shiftTypeId,
-            monthSheet: a.monthSheet,
-            contentHash: a.contentHash,
-          },
-        });
-        importados++;
+        toCreate.push(row);
       } else if (prev.contentHash !== a.contentHash) {
-        await prisma.shiftAssignment.update({
-          where: { id: prev.id },
-          data: {
-            rawValue: a.rawValue,
-            hours: a.hours,
-            shiftTypeId,
-            monthSheet: a.monthSheet,
-            contentHash: a.contentHash,
-          },
-        });
-        atualizados++;
+        toUpdate.push({ id: prev.id, data: row });
       }
     }
 
-    // 5) Remove atribuicoes que nao existem mais na planilha
+    const CHUNK = 500;
+    for (let i = 0; i < toCreate.length; i += CHUNK) {
+      const chunk = toCreate.slice(i, i + CHUNK);
+      const r = await prisma.shiftAssignment.createMany({ data: chunk, skipDuplicates: true });
+      importados += r.count;
+    }
+
+    for (const u of toUpdate) {
+      await prisma.shiftAssignment.update({ where: { id: u.id }, data: u.data });
+      atualizados++;
+    }
+
     const toRemove = existing.filter((e) => !seen.has(key(e.personId, e.date))).map((e) => e.id);
     if (toRemove.length) {
       const del = await prisma.shiftAssignment.deleteMany({ where: { id: { in: toRemove } } });

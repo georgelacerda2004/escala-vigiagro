@@ -22,24 +22,31 @@ export default function Imports() {
 
   useEffect(() => {
     const s = getSocket();
-    const refresh = () => {
+    const onDone = (payload) => {
+      const i = payload?.importados ?? 0;
+      const a = payload?.atualizados ?? 0;
+      const r = payload?.removidos ?? 0;
+      toast.success(`ImportaÃ§Ã£o concluÃ­da: +${i} ~${a} -${r}`);
       qc.invalidateQueries({ queryKey: ['sync-logs'] });
       qc.invalidateQueries({ queryKey: ['import-files'] });
     };
-    s.on('sync:done', refresh);
-    s.on('sync:error', refresh);
+    const onErr = (payload) => {
+      toast.error(`Falha na importaÃ§Ã£o: ${payload?.error || 'erro desconhecido'}`);
+      qc.invalidateQueries({ queryKey: ['sync-logs'] });
+    };
+    s.on('sync:done', onDone);
+    s.on('sync:error', onErr);
     return () => {
-      s.off('sync:done', refresh);
-      s.off('sync:error', refresh);
+      s.off('sync:done', onDone);
+      s.off('sync:error', onErr);
     };
   }, [qc]);
 
   const runImport = async (file) => {
     setBusy(true);
     try {
-      const { data } = await api.post('/import/excel', file ? { file } : {});
-      toast.success(`Importado: +${data.importados} ~${data.atualizados} -${data.removidos}`);
-      qc.invalidateQueries({ queryKey: ['sync-logs'] });
+      await api.post('/import/excel', file ? { file } : {});
+      toast.success('ImportaÃ§Ã£o iniciada â€” vocÃª serÃ¡ notificado ao concluir.');
     } catch {
       /* tratado no interceptor */
     } finally {
@@ -60,9 +67,8 @@ export default function Imports() {
         r.onerror = reject;
         r.readAsDataURL(f);
       });
-      const { data } = await api.post('/import/upload', { filename: f.name, contentBase64 });
-      toast.success(`Planilha enviada: +${data.importados} ~${data.atualizados} -${data.removidos}`);
-      qc.invalidateQueries({ queryKey: ['sync-logs'] });
+      await api.post('/import/upload', { filename: f.name, contentBase64 });
+      toast.success('Planilha enviada â€” processando em segundo plano. VocÃª serÃ¡ notificado.');
       qc.invalidateQueries({ queryKey: ['import-files'] });
     } catch {
       /* tratado no interceptor */
@@ -74,7 +80,7 @@ export default function Imports() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Importações</h1>
+        <h1 className="text-2xl font-bold">ImportaÃ§Ãµes</h1>
         <div className="flex flex-wrap gap-2">
           <label className="btn-ghost cursor-pointer">
             <Upload size={16} /> Enviar planilha (.xlsx)
@@ -94,7 +100,7 @@ export default function Imports() {
 
       <div className="card text-xs text-slate-500">
         <b>Enviar planilha</b>: use quando o sistema estiver na nuvem (sem acesso
-        ao Z:). O arquivo é enviado pelo navegador e importado na hora.
+        ao Z:). O arquivo Ã© enviado pelo navegador e importado na hora.
       </div>
 
       <div className="card">

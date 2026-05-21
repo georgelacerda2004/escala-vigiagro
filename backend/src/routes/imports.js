@@ -6,10 +6,19 @@ import { asyncH } from '../middleware/error.js';
 import { env } from '../config/env.js';
 import { syncFromFile } from '../excel/sync.js';
 import { audit } from '../services/audit.js';
+import { logger } from '../config/logger.js';
 
 const router = Router();
 
 const isXlsx = (f) => /\.xlsx$/i.test(f) && !path.basename(f).startsWith('~$');
+
+function runSyncInBackground(filePath) {
+  setImmediate(() => {
+    syncFromFile(filePath).catch((err) => {
+      logger.error(`[import] background sync falhou: ${err.message}`);
+    });
+  });
+}
 
 router.get(
   '/files',
@@ -29,7 +38,6 @@ router.get(
   })
 );
 
-// Dispara importacao manual (do arquivo mais recente ou de um nome informado)
 router.post(
   '/excel',
   authRequired,
@@ -48,7 +56,6 @@ router.post(
     if (!target || !fs.existsSync(target)) {
       return res.status(404).json({ error: 'Nenhum arquivo .xlsx encontrado' });
     }
-    const result = await syncFromFile(target);
     await audit({
       userId: req.user.sub,
       action: 'IMPORT',
@@ -56,12 +63,11 @@ router.post(
       detail: path.basename(target),
       ip: req.ip,
     });
-    res.json({ ok: true, file: path.basename(target), ...result });
+    runSyncInBackground(target);
+    res.status(202).json({ ok: true, queued: true, file: path.basename(target) });
   })
 );
 
-// Upload da planilha pela tela (essencial na nuvem, sem o disco Z:).
-// Corpo JSON: { filename, contentBase64 }
 router.post(
   '/upload',
   authRequired,
@@ -82,7 +88,6 @@ router.post(
     fs.mkdirSync(env.excel.watchDir, { recursive: true });
     const dest = path.join(env.excel.watchDir, safe);
     fs.writeFileSync(dest, buf);
-    const result = await syncFromFile(dest);
     await audit({
       userId: req.user.sub,
       action: 'IMPORT',
@@ -90,7 +95,8 @@ router.post(
       detail: safe,
       ip: req.ip,
     });
-    res.json({ ok: true, file: safe, ...result });
+    runSyncInBackground(dest);
+    res.status(202).json({ ok: true, queued: true, file: safe });
   })
 );
 
