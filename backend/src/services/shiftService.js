@@ -97,15 +97,24 @@ export async function listShifts(q = {}) {
   return { items: rows.map(enrich), dayNotes, total, take, skip };
 }
 
+// "Hoje" no fuso de Brasilia (UTC-3), independente do TZ do processo (Render = UTC).
+function todayYmdBrt(now) {
+  const brt = new Date(now.getTime() - 3 * 3600 * 1000);
+  return `${brt.getUTCFullYear()}-${String(brt.getUTCMonth() + 1).padStart(2, '0')}-${String(
+    brt.getUTCDate()
+  ).padStart(2, '0')}`;
+}
+
 export async function dashboardSummary() {
   const now = new Date();
-  const isoToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-    now.getDate()
-  ).padStart(2, '0')}`;
+  const todayYmd = todayYmdBrt(now);
+  const isoToday = todayYmd;
 
-  // janela ampla cobrindo plantoes que cruzam a meia-noite
-  const lo = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() - 1));
-  const hi = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate() + 2));
+  // janela ampla cobrindo plantoes que cruzam a meia-noite (em BRT)
+  const [ty, tm, td] = todayYmd.split('-').map(Number);
+  const lo = new Date(Date.UTC(ty, tm - 1, td - 1));
+  const hi = new Date(Date.UTC(ty, tm - 1, td + 2));
+  const todayDateUtc = new Date(Date.UTC(ty, tm - 1, td));
 
   const [around, peopleCount, teamCount, lastSync] = await Promise.all([
     prisma.shiftAssignment.findMany({
@@ -122,9 +131,20 @@ export async function dashboardSummary() {
 
   const isK9 = (r) => /K9/i.test(r.sigla || '');
 
-  const plantaoAtual = reais
-    .filter((r) => now >= r.inicio && now < r.fim && !isK9(r))
+  const hojeReais = reais.filter((r) => r.date === todayYmd);
+
+  // Marca quem esta efetivamente em plantao agora (real-time).
+  const emPlantaoAgora = (r) => now >= r.inicio && now < r.fim;
+
+  // "Plantao de hoje": todos os escalados em algum momento de hoje (ALA = 24h ou 12h).
+  // Inclui quem ja saiu (12h que terminou as 21h) e quem ainda nao entrou.
+  const plantaoHoje = hojeReais
+    .filter((r) => !isK9(r))
+    .map((r) => ({ ...r, agora: emPlantaoAgora(r) }))
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
+
+  // Compat: lista "agora" (real-time) caso o frontend precise.
+  const plantaoAtual = plantaoHoje.filter((r) => r.agora);
 
   const entram21h = reais
     .filter((r) => r.regime === '24h' && !isK9(r) && r.inicio.getTime() === proxTroca.getTime())
@@ -137,19 +157,12 @@ export async function dashboardSummary() {
     .filter((r) => r.regime === '12h' && !isK9(r) && r.inicio.getTime() === prox09.getTime())
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
-  const todayYmd = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(
-    now.getDate()
-  ).padStart(2, '0')}`;
-
-  const hojeReais = reais.filter((r) => r.date === todayYmd);
-
   // Servidores K9 escalados hoje (sem horario de troca, regime distinto)
   const plantaoK9 = hojeReais
     .filter(isK9)
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
   // Voos / observacoes do K9 para hoje
-  const todayDateUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
   const voosHojeRaw = await prisma.dayNote.findMany({
     where: { date: todayDateUtc },
     orderBy: [{ teamSigla: 'asc' }],
@@ -178,6 +191,7 @@ export async function dashboardSummary() {
     equipes: teamCount,
     plantoesHoje: hojeReais.length,
     ausencias,
+    plantaoHoje,
     plantaoAtual,
     plantaoK9,
     voosHoje,
