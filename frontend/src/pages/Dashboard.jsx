@@ -21,11 +21,6 @@ function PersonChip({ p }) {
       {p.pessoa}
       {p.sigla && <span className="text-xs opacity-70">{p.sigla}</span>}
       <span className="rounded bg-black/10 px-1 text-[10px] font-bold">{is12 ? '12h' : '24h'}</span>
-      {p.agora && (
-        <span className="rounded bg-emerald-600 px-1 text-[10px] font-bold text-white" title="Em plantão agora">
-          AGORA
-        </span>
-      )}
     </span>
   );
 }
@@ -118,34 +113,27 @@ export default function Dashboard() {
         </p>
       </div>
 
-      {/* Plantao de hoje (24h + 12h + K9) */}
+      {/* Em plantao agora (24h + 12h + K9) */}
       <div className="card border-l-4 border-brand-600">
         <div className="mb-3 flex items-center gap-2 text-brand-700 dark:text-brand-400">
           <Clock size={20} />
-          <h2 className="text-lg font-bold">Plantão de hoje</h2>
+          <h2 className="text-lg font-bold">Em plantão agora</h2>
         </div>
         {!sum ? (
           <Spinner />
-        ) : (sum.plantaoHoje?.length || 0) === 0 && (!sum.plantaoK9 || sum.plantaoK9.length === 0) ? (
-          <EmptyState>Nenhum escalado para hoje.</EmptyState>
+        ) : (sum.plantaoAtual?.length || 0) === 0 && (!sum.plantaoK9 || sum.plantaoK9.length === 0) ? (
+          <EmptyState>Ninguém em plantão neste momento.</EmptyState>
         ) : (
           <div className="flex flex-col gap-4 md:flex-row md:gap-6">
             <div className="flex-1">
-              {(sum.plantaoHoje?.length || 0) === 0 ? (
-                <p className="text-sm text-slate-400">Nenhum plantonista 24h/12h hoje.</p>
+              {(sum.plantaoAtual?.length || 0) === 0 ? (
+                <p className="text-sm text-slate-400">Ninguém de 24h/12h em plantão agora.</p>
               ) : (
-                <>
-                  {sum.plantaoAtual?.length > 0 && (
-                    <p className="mb-3 text-slate-600 dark:text-slate-300">
-                      Agora: <b>{listNames(sum.plantaoAtual)}</b>.
-                    </p>
-                  )}
-                  <div className="flex flex-wrap gap-2">
-                    {sum.plantaoHoje.map((p) => (
-                      <PersonChip key={p.id} p={p} />
-                    ))}
-                  </div>
-                </>
+                <div className="flex flex-wrap gap-2">
+                  {sum.plantaoAtual.map((p) => (
+                    <PersonChip key={p.id} p={p} />
+                  ))}
+                </div>
               )}
             </div>
             {(sum.plantaoK9?.length > 0 || sum.voosHoje?.length > 0) && (
