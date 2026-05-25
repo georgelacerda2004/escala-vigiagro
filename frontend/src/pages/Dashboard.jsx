@@ -224,7 +224,7 @@ export default function Dashboard() {
         )}
         {sum?.entram09h?.length > 0 && (
           <p className="mt-3 text-xs text-slate-500">
-            Turno 12h (Damata/Thiago) — {dayjs().hour() >= 9 ? 'amanhã' : 'hoje'} às 09h:{' '}
+            Turno 12h (Damata/Tiago) — {dayjs().hour() >= 9 ? 'amanhã' : 'hoje'} às 09h:{' '}
             <b>{listNames(sum.entram09h)}</b> (sai às 21h).
           </p>
         )}
@@ -375,7 +375,7 @@ export default function Dashboard() {
         )}
         <p className="mt-3 text-[11px] text-slate-400">
           Cada dia mostra quem entra de plantão naquele dia. 24h: inicia 21h e
-          sai 21h do dia seguinte. 12h (Damata/Thiago): 09h–21h.
+          sai 21h do dia seguinte. 12h (Damata/Tiago): 09h–21h.
         </p>
       </div>
     </div>

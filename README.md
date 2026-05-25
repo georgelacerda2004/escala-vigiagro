@@ -35,7 +35,7 @@ perfis, logs e backup automático.
 
 ### Regras de plantão implementadas
 
-- **12h** (apenas **Damata** e **Thiago**): 09h → 21h do mesmo dia.
+- **12h** (apenas **Damata** e **Tiago**): 09h → 21h do mesmo dia.
 - **24h** (demais): o dia marcado é o **início** — 21h do dia marcado →
   21h do **dia seguinte**.
 - Dashboard mostra **Plantão atual** e **Entram às 21h** em tempo real.

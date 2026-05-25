@@ -167,7 +167,7 @@ export default function Escala() {
           ))}
           <span>
             <b>24h</b>: inicia 21h do dia e sai 21h do dia seguinte ·{' '}
-            <b className="text-amber-600">12h</b> (Damata/Thiago): 09h–21h
+            <b className="text-amber-600">12h</b> (Damata/Tiago): 09h–21h
           </span>
         </div>
       )}

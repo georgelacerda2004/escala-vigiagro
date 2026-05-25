@@ -151,7 +151,7 @@ export async function dashboardSummary() {
     .filter((r) => r.regime === '24h' && !isK9(r) && r.inicio.getTime() === proxTroca.getTime())
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
-  // 12h (Damata/Thiago) que iniciam na proxima manha 09h BRT
+  // 12h (Damata/Tiago) que iniciam na proxima manha 09h BRT
   const prox09 = next09(now);
   const entram09h = reais
     .filter((r) => r.regime === '12h' && !isK9(r) && r.inicio.getTime() === prox09.getTime())

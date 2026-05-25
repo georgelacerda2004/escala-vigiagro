@@ -1,6 +1,6 @@
 // Regras de horario de plantao.
 //
-// - DA MATTA e TIAGO (Damata/Thiago): escala de 12h -> 09:00 ate 21:00 do
+// - DA MATTA e TIAGO (Damata/Tiago): escala de 12h -> 09:00 ate 21:00 do
 //   proprio dia marcado na escala.
 // - Demais servidores: escala de 24h -> inicia 21:00 do dia ANTERIOR ao dia
 //   marcado e termina 21:00 do dia marcado.
