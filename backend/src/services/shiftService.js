@@ -116,6 +116,11 @@ export async function dashboardSummary() {
   const hi = new Date(Date.UTC(ty, tm - 1, td + 2));
   const todayDateUtc = new Date(Date.UTC(ty, tm - 1, td));
 
+  // Janela do dia em BRT (00h BRT = 03h UTC): usada para "plantao de hoje"
+  // considerando turnos 24h que cruzam meia-noite.
+  const dayStartUtc = new Date(Date.UTC(ty, tm - 1, td, 3));
+  const dayEndUtc = new Date(Date.UTC(ty, tm - 1, td + 1, 3));
+
   const [around, peopleCount, teamCount, lastSync] = await Promise.all([
     prisma.shiftAssignment.findMany({
       where: { date: { gte: lo, lte: hi } },
@@ -131,16 +136,21 @@ export async function dashboardSummary() {
 
   const isK9 = (r) => /K9/i.test(r.sigla || '');
 
+  // Rows marcadas para "hoje" (data da escala). Usado para K9 e ausencias.
   const hojeReais = reais.filter((r) => r.date === todayYmd);
 
   // Marca quem esta efetivamente em plantao agora (real-time).
   const emPlantaoAgora = (r) => now >= r.inicio && now < r.fim;
 
-  // "Plantao de hoje": todos os escalados em algum momento de hoje (ALA = 24h ou 12h).
+  // Cruza o dia BRT atual? Inclui turnos 24h que comecam ontem 21h e terminam
+  // hoje 21h, e os que comecam hoje 21h e seguem ate amanha 21h.
+  const intersectaHoje = (r) => r.inicio < dayEndUtc && r.fim > dayStartUtc;
+
+  // "Plantao de hoje": qualquer 24h/12h cuja janela toca o dia BRT atual.
   // Inclui quem ja saiu (12h que terminou as 21h) e quem ainda nao entrou.
   // Exclui ausentes (ferias / licenca / viagem / compromisso).
-  const plantaoHoje = hojeReais
-    .filter((r) => !isK9(r) && !r.ausente)
+  const plantaoHoje = reais
+    .filter((r) => !isK9(r) && !r.ausente && intersectaHoje(r))
     .map((r) => ({ ...r, agora: emPlantaoAgora(r) }))
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
