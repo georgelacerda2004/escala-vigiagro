@@ -224,7 +224,8 @@ export default function Dashboard() {
         )}
         {sum?.entram09h?.length > 0 && (
           <p className="mt-3 text-xs text-slate-500">
-            12h às 09h: {listNames(sum.entram09h)} (Damata/Thiago — 09h às 21h).
+            Turno 12h (Damata/Thiago) — {dayjs().hour() >= 9 ? 'amanhã' : 'hoje'} às 09h:{' '}
+            <b>{listNames(sum.entram09h)}</b> (sai às 21h).
           </p>
         )}
       </div>
