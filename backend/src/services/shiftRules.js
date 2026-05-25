@@ -23,12 +23,20 @@ export function regimeOf(personName) {
   return is12h(personName) ? '12h' : '24h';
 }
 
-// Extrai Y/M/D do Date salvo (meia-noite UTC) e monta um Date no fuso local.
+// Constroi um Date que representa "hour:00 BRT" do dia (y,m,d).
+// Brasil aboliu horario de verao em 2019, entao BRT = UTC-3 fixo.
+// Em UTC esse instante e (hour + 3):00 do mesmo dia.
+function brtAt(y, m, d, hour) {
+  return new Date(Date.UTC(y, m, d, hour + 3, 0, 0, 0));
+}
+
+// Extrai Y/M/D do Date salvo (meia-noite UTC) e monta um Date em BRT,
+// independente do fuso do processo (Render = UTC; dev local = BRT).
 function localAt(dateUTC, day, hour) {
   const y = dateUTC.getUTCFullYear();
   const m = dateUTC.getUTCMonth();
   const d = dateUTC.getUTCDate();
-  return new Date(y, m, d + day, hour, 0, 0, 0);
+  return brtAt(y, m, d + day, hour);
 }
 
 /**
@@ -61,9 +69,24 @@ export function isWorkingAt(personName, dateUTC, now = new Date()) {
   return now >= w.start && now < w.end;
 }
 
-// Proximo horario de troca de 21h a partir de "now" (local).
+// Proximo horario de troca de 21h BRT a partir de "now" (instante absoluto).
 export function next21(now = new Date()) {
-  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 21, 0, 0, 0);
-  if (now >= b) b.setDate(b.getDate() + 1);
-  return b;
+  const brt = new Date(now.getTime() - 3 * 3600 * 1000);
+  const y = brt.getUTCFullYear();
+  const m = brt.getUTCMonth();
+  const d = brt.getUTCDate();
+  let next = brtAt(y, m, d, 21);
+  if (now >= next) next = brtAt(y, m, d + 1, 21);
+  return next;
+}
+
+// Proxima 09h BRT a partir de "now" (instante absoluto). Usada para o turno 12h.
+export function next09(now = new Date()) {
+  const brt = new Date(now.getTime() - 3 * 3600 * 1000);
+  const y = brt.getUTCFullYear();
+  const m = brt.getUTCMonth();
+  const d = brt.getUTCDate();
+  let next = brtAt(y, m, d, 9);
+  if (now >= next) next = brtAt(y, m, d + 1, 9);
+  return next;
 }

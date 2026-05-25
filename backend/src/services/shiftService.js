@@ -1,5 +1,5 @@
 import { prisma } from '../config/prisma.js';
-import { shiftWindow, regimeOf, next21, is12h } from './shiftRules.js';
+import { shiftWindow, regimeOf, next21, next09, is12h } from './shiftRules.js';
 
 const ABSENT = new Set(['f', 'l', 'v', 'c']); // ferias / licenca / viagem / compromisso
 
@@ -150,9 +150,8 @@ export async function dashboardSummary() {
     .filter((r) => r.regime === '24h' && !isK9(r) && r.inicio.getTime() === proxTroca.getTime())
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
-  // 12h (Damata/Thiago) que iniciam na proxima manha 09h
-  const prox09 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 9, 0, 0, 0);
-  if (now >= prox09) prox09.setDate(prox09.getDate() + 1);
+  // 12h (Damata/Thiago) que iniciam na proxima manha 09h BRT
+  const prox09 = next09(now);
   const entram09h = reais
     .filter((r) => r.regime === '12h' && !isK9(r) && r.inicio.getTime() === prox09.getTime())
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
@@ -206,8 +205,10 @@ export async function dashboardSummary() {
 export async function calendarMonth(personId, month) {
   const m = /^(\d{4})-(\d{2})$/.exec(month || '');
   const now = new Date();
-  const year = m ? Number(m[1]) : now.getFullYear();
-  const mon = m ? Number(m[2]) : now.getMonth() + 1; // 1-12
+  // Mes corrente em BRT (Render = UTC; evita virar pro mes seguinte na madrugada).
+  const brtNow = new Date(now.getTime() - 3 * 3600 * 1000);
+  const year = m ? Number(m[1]) : brtNow.getUTCFullYear();
+  const mon = m ? Number(m[2]) : brtNow.getUTCMonth() + 1; // 1-12
 
   const person = await prisma.person.findUnique({
     where: { id: Number(personId) },

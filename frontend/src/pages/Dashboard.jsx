@@ -191,10 +191,17 @@ export default function Dashboard() {
         <div className="mb-3 flex items-center gap-2 text-amber-600">
           <ArrowRightLeft size={20} />
           <h2 className="text-lg font-bold">
-            Entram às 21h{' '}
+            Próxima troca{' '}
             {sum && (
               <span className="text-sm font-normal text-slate-400">
-                (troca {dayjs(sum.proximaTroca).format('DD/MM HH:mm')})
+                ({(() => {
+                  const t = dayjs(sum.proximaTroca);
+                  const hoje = dayjs().startOf('day');
+                  const diff = t.startOf('day').diff(hoje, 'day');
+                  const quando =
+                    diff === 0 ? 'hoje' : diff === 1 ? 'amanhã' : t.format('ddd DD/MM');
+                  return `${quando} às ${t.format('HH:mm')}`;
+                })()})
               </span>
             )}
           </h2>
