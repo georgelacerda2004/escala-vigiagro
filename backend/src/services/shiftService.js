@@ -138,8 +138,9 @@ export async function dashboardSummary() {
 
   // "Plantao de hoje": todos os escalados em algum momento de hoje (ALA = 24h ou 12h).
   // Inclui quem ja saiu (12h que terminou as 21h) e quem ainda nao entrou.
+  // Exclui ausentes (ferias / licenca / viagem / compromisso).
   const plantaoHoje = hojeReais
-    .filter((r) => !isK9(r))
+    .filter((r) => !isK9(r) && !r.ausente)
     .map((r) => ({ ...r, agora: emPlantaoAgora(r) }))
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
@@ -156,9 +157,11 @@ export async function dashboardSummary() {
     .filter((r) => r.regime === '12h' && !isK9(r) && r.inicio.getTime() === prox09.getTime())
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
-  // Servidores K9 escalados hoje (sem horario de troca, regime distinto)
+  // Servidores K9 escalados hoje (sem horario de troca, regime distinto).
+  // Exclui ausentes (ferias / licenca / viagem / compromisso) — mesma regra
+  // do quadro detalhado por dia no frontend.
   const plantaoK9 = hojeReais
-    .filter(isK9)
+    .filter((r) => isK9(r) && !r.ausente)
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
   // Voos / observacoes do K9 para hoje
