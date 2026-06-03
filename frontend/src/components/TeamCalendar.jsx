@@ -70,8 +70,12 @@ function DayCell({ date, list, notes, minH = 90, onClick, selected }) {
   // Foco principal: plantonistas que NAO sao da equipe K9.
   const principais = (list || []).filter((p) => !/K9/i.test(p.sigla || ''));
   const operadoresK9 = k9Operators(list);
-  const k9Notes = (notes || []).filter((n) => /K9/i.test(n.teamSigla || ''));
-  const temK9 = operadoresK9.length > 0 || k9Notes.length > 0;
+  // Todos os dayNotes do dia (o parser do Excel so captura "Voos sugeridos"
+  // como dayNote, entao toda nota e um voo sugerido — sem filtrar por equipe).
+  const voosLinhas = (notes || []).flatMap((n) =>
+    String(n.text || '').split('\n').map((s) => s.trim()).filter(Boolean)
+  );
+  const temK9 = operadoresK9.length > 0;
   const Wrapper = onClick ? 'button' : 'div';
   const ringCls = selected
     ? 'border-amber-500 ring-2 ring-amber-400/60'
@@ -102,10 +106,7 @@ function DayCell({ date, list, notes, minH = 90, onClick, selected }) {
         {temK9 && (
           <div
             className="w-[42%] shrink-0 rounded border-l border-amber-300 bg-amber-50/60 px-1 py-0.5 text-[9px] leading-3 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200"
-            title={
-              (operadoresK9.length ? `K9: ${operadoresK9.map((p) => p.pessoa).join(', ')}\n` : '') +
-              k9Notes.map((n) => n.text).join('\n')
-            }
+            title={`K9: ${operadoresK9.map((p) => p.pessoa).join(', ')}`}
           >
             <div className="mb-0.5 font-bold uppercase tracking-wide opacity-70">K9</div>
             {operadoresK9.map((p) => (
@@ -113,16 +114,22 @@ function DayCell({ date, list, notes, minH = 90, onClick, selected }) {
                 {p.pessoa}
               </div>
             ))}
-            {k9Notes.map((n) =>
-              n.text.split('\n').map((line, idx) => (
-                <div key={`${n.id}-${idx}`} className="truncate opacity-80">
-                  {line}
-                </div>
-              ))
-            )}
           </div>
         )}
       </div>
+      {voosLinhas.length > 0 && (
+        <div
+          className="mt-1 rounded border border-amber-300/70 bg-amber-50/40 px-1 py-0.5 text-[9px] leading-3 text-amber-900 dark:border-amber-700/50 dark:bg-amber-950/20 dark:text-amber-200"
+          title={`Voos sugeridos:\n${voosLinhas.join('\n')}`}
+        >
+          <div className="mb-0.5 font-bold uppercase tracking-wide opacity-70">Voos</div>
+          {voosLinhas.map((linha, idx) => (
+            <div key={idx} className="truncate">
+              {linha}
+            </div>
+          ))}
+        </div>
+      )}
     </Wrapper>
   );
 }

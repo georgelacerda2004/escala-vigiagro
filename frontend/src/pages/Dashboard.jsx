@@ -90,8 +90,11 @@ export default function Dashboard() {
   const dayPrincipais = dayNonK9.filter((p) => !p.ausente);
   const dayAusentes = dayNonK9.filter((p) => p.ausente);
   const dayK9 = dayItems.filter((p) => /K9/i.test(p.sigla || '') && !p.ausente);
-  const dayVoos = (sched?.dayNotes || []).filter(
-    (n) => n.date === selectedDate && /K9/i.test(n.teamSigla || '')
+  // dayNotes do dia. O parser de Excel so captura "Voos sugeridos" como dayNote,
+  // entao todo dayNote do dia ja e um voo sugerido — sem filtrar por equipe.
+  const dayVoos = (sched?.dayNotes || []).filter((n) => n.date === selectedDate);
+  const dayVooLinhas = dayVoos.flatMap((n) =>
+    n.text.split('\n').map((s) => s.trim()).filter(Boolean)
   );
   const isSelectedToday = selectedDate === dayjs().format('YYYY-MM-DD');
   const selectedLabel = dayjs(selectedDate).format('dddd, DD/MM/YYYY');
@@ -135,39 +138,42 @@ export default function Dashboard() {
                   ))}
                 </div>
               )}
+              {sum.voosHoje?.length > 0 && (
+                <div className="mt-3 rounded-md border border-amber-300 bg-amber-50/60 px-3 py-2 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200">
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-wide opacity-80">
+                    Voos sugeridos de hoje
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 text-xs">
+                    {sum.voosHoje
+                      .flatMap((n) => n.text.split('\n').map((s) => s.trim()).filter(Boolean))
+                      .map((linha, i) => (
+                        <span
+                          key={i}
+                          className="rounded-full bg-amber-200/70 px-2 py-0.5 font-medium dark:bg-amber-800/40"
+                        >
+                          {linha}
+                        </span>
+                      ))}
+                  </div>
+                </div>
+              )}
             </div>
-            {(sum.plantaoK9?.length > 0 || sum.voosHoje?.length > 0) && (
+            {sum.plantaoK9?.length > 0 && (
               <aside className="w-full shrink-0 rounded-lg border border-amber-300 bg-amber-50/60 px-3 py-2 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200 md:w-72">
                 <div className="mb-1 text-[11px] font-bold uppercase tracking-wide opacity-80">
                   K9 hoje
                 </div>
-                {sum.plantaoK9?.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {sum.plantaoK9.map((p) => (
-                      <span
-                        key={p.id}
-                        className="rounded-full bg-amber-200/70 px-2 py-0.5 text-xs font-medium dark:bg-amber-800/40"
-                        title={`${p.funcao || ''} · ${p.horario || ''}`}
-                      >
-                        {p.pessoa}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs opacity-70">Sem escalado.</div>
-                )}
-                {sum.voosHoje?.length > 0 && (
-                  <div className="mt-2 space-y-0.5 text-[11px] leading-4 opacity-90">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide opacity-60">
-                      Voos sugeridos
-                    </div>
-                    {sum.voosHoje.flatMap((n) =>
-                      n.text.split('\n').map((line, i) => (
-                        <div key={`${n.id}-${i}`}>{line}</div>
-                      ))
-                    )}
-                  </div>
-                )}
+                <div className="flex flex-wrap gap-1">
+                  {sum.plantaoK9.map((p) => (
+                    <span
+                      key={p.id}
+                      className="rounded-full bg-amber-200/70 px-2 py-0.5 text-xs font-medium dark:bg-amber-800/40"
+                      title={`${p.funcao || ''} · ${p.horario || ''}`}
+                    >
+                      {p.pessoa}
+                    </span>
+                  ))}
+                </div>
               </aside>
             )}
           </div>
@@ -265,39 +271,40 @@ export default function Dashboard() {
                     .join(', ')}
                 </div>
               )}
+              {dayVooLinhas.length > 0 && (
+                <div className="mt-3 rounded-md border border-amber-300 bg-amber-50/60 px-3 py-2 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200">
+                  <div className="mb-1 text-[11px] font-bold uppercase tracking-wide opacity-80">
+                    Voos sugeridos
+                  </div>
+                  <div className="flex flex-wrap gap-1.5 text-xs">
+                    {dayVooLinhas.map((linha, i) => (
+                      <span
+                        key={i}
+                        className="rounded-full bg-amber-200/70 px-2 py-0.5 font-medium dark:bg-amber-800/40"
+                      >
+                        {linha}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
-            {(dayK9.length > 0 || dayVoos.length > 0) && (
+            {dayK9.length > 0 && (
               <aside className="w-full shrink-0 rounded-lg border border-amber-300 bg-amber-50/60 px-3 py-2 text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/30 dark:text-amber-200 md:w-80">
                 <div className="mb-1 text-[11px] font-bold uppercase tracking-wide opacity-80">
                   K9
                 </div>
-                {dayK9.length > 0 ? (
-                  <div className="flex flex-wrap gap-1">
-                    {dayK9.map((p) => (
-                      <span
-                        key={p.id}
-                        className="rounded-full bg-amber-200/70 px-2 py-0.5 text-xs font-medium dark:bg-amber-800/40"
-                        title={`${p.funcao || ''} · ${p.horario || ''}`}
-                      >
-                        {p.pessoa}
-                      </span>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="text-xs opacity-70">Sem servidor escalado.</div>
-                )}
-                {dayVoos.length > 0 && (
-                  <div className="mt-2 space-y-0.5 text-xs leading-5">
-                    <div className="text-[10px] font-semibold uppercase tracking-wide opacity-60">
-                      Voos sugeridos
-                    </div>
-                    {dayVoos.flatMap((n) =>
-                      n.text.split('\n').map((line, i) => (
-                        <div key={`${n.id}-${i}`}>• {line}</div>
-                      ))
-                    )}
-                  </div>
-                )}
+                <div className="flex flex-wrap gap-1">
+                  {dayK9.map((p) => (
+                    <span
+                      key={p.id}
+                      className="rounded-full bg-amber-200/70 px-2 py-0.5 text-xs font-medium dark:bg-amber-800/40"
+                      title={`${p.funcao || ''} · ${p.horario || ''}`}
+                    >
+                      {p.pessoa}
+                    </span>
+                  ))}
+                </div>
               </aside>
             )}
           </div>
