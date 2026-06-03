@@ -59,8 +59,17 @@ export default function Settings() {
         </p>
         {user?.role === 'OPERATOR' && (
           <p className="mt-1 text-xs text-slate-500">
-            Seu acesso é <b>somente leitura</b> (consulta da escala). Apenas o
-            administrador altera dados.
+            Seu acesso é <b>somente leitura</b> (consulta da escala).
+            Supervisores e administradores podem importar a planilha e
+            editar a escala.
+          </p>
+        )}
+        {user?.role === 'SUPERVISOR' && (
+          <p className="mt-1 text-xs text-slate-500">
+            Como <b>supervisor</b>, você pode <b>importar a planilha</b>
+            {' '}(menu lateral <b>Importações</b>) e <b>editar</b> atribuições
+            da escala. Configurações do sistema e gestão de usuários ficam
+            com o administrador.
           </p>
         )}
       </div>

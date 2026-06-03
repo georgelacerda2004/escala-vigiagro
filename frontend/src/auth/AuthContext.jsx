@@ -13,11 +13,26 @@ export function AuthProvider({ children }) {
       setLoading(false);
       return;
     }
-    api
-      .get('/auth/me')
-      .then((r) => setUser(r.data.user))
-      .catch(() => localStorage.removeItem('token'))
-      .finally(() => setLoading(false));
+    const fetchMe = () =>
+      api
+        .get('/auth/me')
+        .then((r) => setUser(r.data.user))
+        .catch(() => localStorage.removeItem('token'));
+
+    fetchMe().finally(() => setLoading(false));
+
+    // Reverifica a role/perfil quando a aba volta ao foco — assim, se o admin
+    // tiver promovido o usuario nesse meio tempo, a UI atualiza sem reload.
+    const onFocus = () => {
+      if (localStorage.getItem('token')) fetchMe();
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') onFocus();
+    });
+    return () => {
+      window.removeEventListener('focus', onFocus);
+    };
   }, []);
 
   const login = async (email, password) => {
