@@ -186,18 +186,19 @@ function parseMonthSheet(wb, sheetName, legendByCode, peopleSeenGlobal) {
 
     const hasValues = rowHasDayValues(r, dateCols);
 
-    if (a && !hasValues) {
-      // Cabecalho de grupo/equipe (ex.: "AFFA MV") ou rotulo de resumo.
-      // Nunca promovemos a "equipe" um nome ja conhecido como pessoa em
-      // outra aba (evita que uma linha vazia da pessoa vire team fantasma).
-      if (NON_PERSON.has(upper(a))) continue;
-      if (peopleSeenGlobal && peopleSeenGlobal.has(a)) continue;
+    // Linha que e claramente cabecalho de equipe (AFFA, AFA, EQUIPE, K9):
+    // SEMPRE tratada como equipe, mesmo que alguma sync passada tenha
+    // gravado por engano como pessoa. Evita que a row fantasma se perpetue.
+    if (a && TEAM_HINT_RE.test(a)) {
       currentTeam = a;
       continue;
     }
-    // Linha com texto + valores que claramente e cabecalho de equipe
-    // (ex.: "AFFA- K9" com "CP" digitado por engano em alguns dias).
-    if (a && TEAM_HINT_RE.test(a) && !(peopleSeenGlobal && peopleSeenGlobal.has(a))) {
+    if (a && !hasValues) {
+      // Cabecalho de grupo/equipe sem valores ou rotulo de resumo.
+      // Nao promove a "equipe" um nome ja conhecido como pessoa em outra
+      // aba (evita que uma linha vazia da pessoa vire team fantasma).
+      if (NON_PERSON.has(upper(a))) continue;
+      if (peopleSeenGlobal && peopleSeenGlobal.has(a)) continue;
       currentTeam = a;
       continue;
     }

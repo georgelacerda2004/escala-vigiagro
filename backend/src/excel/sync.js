@@ -154,9 +154,28 @@ export async function syncFromFile(filePath) {
       if (orphanIds.length) await prisma.dayNote.deleteMany({ where: { id: { in: orphanIds } } });
     }
 
+    // Limpeza idempotente: pessoas-fantasma cujo nome e claramente rotulo
+    // de equipe (AFFA K9, AFA MV, EQUIPE X). Vieram de syncs antigas antes
+    // do parser ficar robusto. Remove assignments + user + person.
+    const fakeRe = /^(EQUIPE\b|AFF?A\b)/i;
+    const fakePeople = await prisma.person.findMany({
+      where: { name: { contains: '' } },
+      select: { id: true, name: true },
+    });
+    let fakesRemovidos = 0;
+    for (const p of fakePeople) {
+      if (!fakeRe.test(p.name)) continue;
+      await prisma.shiftAssignment.deleteMany({ where: { personId: p.id } });
+      await prisma.user.deleteMany({ where: { personId: p.id } });
+      await prisma.person.delete({ where: { id: p.id } });
+      fakesRemovidos += 1;
+      logger.info(`[sync] removida pessoa-fantasma: "${p.name}"`);
+    }
+    if (fakesRemovidos) removidos += fakesRemovidos;
+
     const durationMs = Date.now() - started;
     const status = 'OK';
-    const mensagem = `Abas: ${data.stats.sheets} | pessoas: ${data.stats.people} | equipes: ${data.stats.teams}`;
+    const mensagem = `Abas: ${data.stats.sheets} | pessoas: ${data.stats.people} | equipes: ${data.stats.teams}${fakesRemovidos ? ` | fantasmas: ${fakesRemovidos}` : ''}`;
 
     await prisma.syncLog.create({
       data: {
