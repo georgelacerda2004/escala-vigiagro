@@ -1,0 +1,6 @@
+# Segredos e artefatos locais do Supabase — nunca commitar
+supabase/functions/.env
+supabase/.branches/
+supabase/.temp/
+.env
+.env.local
