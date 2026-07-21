@@ -1,0 +1,12 @@
+# Configuração local do projeto Supabase (KidsGuard).
+# Ajuste project_id ao vincular: supabase link --project-ref <ref>
+project_id = "kidsguard"
+
+[functions.ingest]
+verify_jwt = false   # autenticado por x-device-token (não por JWT de usuário)
+
+[functions.classify]
+verify_jwt = false   # endpoint de teste
+
+[functions.summarize]
+verify_jwt = false   # chamado por cron/service role
