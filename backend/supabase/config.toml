@@ -2,6 +2,10 @@
 # Ajuste project_id ao vincular: supabase link --project-ref <ref>
 project_id = "kidsguard"
 
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
 [functions.ingest]
 verify_jwt = false   # autenticado por x-device-token (não por JWT de usuário)
 
