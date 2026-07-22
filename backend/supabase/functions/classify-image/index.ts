@@ -23,10 +23,15 @@ Deno.serve(async (req) => {
 
     const { data: device, error: devErr } = await db
       .from("devices")
-      .select("id, child_id")
+      .select("id, child_id, vision_enabled")
       .eq("device_token", deviceToken)
       .single();
     if (devErr || !device) return json({ error: "device_token inválido" }, 401);
+
+    // Opt-in de privacidade: a visão (envio da tela) só roda se o pai autorizou.
+    if (!device.vision_enabled) {
+      return json({ ok: true, skipped: "vision_disabled" }, 200);
+    }
 
     await db.from("devices").update({ last_seen_at: new Date().toISOString() }).eq("id", device.id);
 

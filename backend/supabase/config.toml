@@ -10,10 +10,13 @@ sql_paths = ["./seed.sql"]
 verify_jwt = false   # autenticado por x-device-token (não por JWT de usuário)
 
 [functions.classify]
-verify_jwt = false   # endpoint de teste
+verify_jwt = true    # TRANCADA (era so teste) — exige Bearer JWT valido
 
 [functions.classify-image]
 verify_jwt = false   # autenticado por x-device-token (reforço por visão)
 
 [functions.summarize]
-verify_jwt = false   # chamado por cron/service role
+verify_jwt = true    # TRANCADA — cron/serviço chamam com Bearer service-role
+
+[functions.notify]
+verify_jwt = true    # TRANCADA — cron/serviço chamam com Bearer service-role
