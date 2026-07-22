@@ -106,5 +106,17 @@
             android:layout_height="wrap_content"
             android:text=""
             android:layout_marginTop="12dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#33888888"
+            android:layout_marginVertical="24dp" />
+
+        <Button
+            android:id="@+id/btnProtect"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_protect" />
     </LinearLayout>
 </ScrollView>

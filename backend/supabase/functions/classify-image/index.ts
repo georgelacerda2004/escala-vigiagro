@@ -5,7 +5,9 @@
 //   header: x-device-token
 //   body:   { "image_base64": "...", "media_type": "image/jpeg" }
 import { corsHeaders, json } from "../_shared/cors.ts";
-import { serviceClient } from "../_shared/supabase.ts";
+import {
+  enforceSubscription, hasActiveSubscription, serviceClient,
+} from "../_shared/supabase.ts";
 import { classifyImage } from "../_shared/claude.ts";
 
 Deno.serve(async (req) => {
@@ -31,6 +33,11 @@ Deno.serve(async (req) => {
     // Opt-in de privacidade: a visão (envio da tela) só roda se o pai autorizou.
     if (!device.vision_enabled) {
       return json({ ok: true, skipped: "vision_disabled" }, 200);
+    }
+
+    // Assinatura: sem plano ativo, não processa (quando o enforcement está ligado).
+    if (enforceSubscription() && !(await hasActiveSubscription(db, device.child_id))) {
+      return json({ ok: true, skipped: "no_subscription" }, 402);
     }
 
     await db.from("devices").update({ last_seen_at: new Date().toISOString() }).eq("id", device.id);

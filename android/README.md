@@ -49,6 +49,16 @@ Como funciona: um Foreground Service segura o `MediaProjection`, tira ~1 screens
 cada 5s **só com o Roblox aberto**, roda **OCR (ML Kit, offline)** e envia à nuvem
 apenas o texto suspeito. Nenhuma imagem é armazenada. Detalhes em `../docs/roblox.md`.
 
+## Robustez (Fase 3.5)
+
+- **Proteção contra desinstalação:** botão "🔒 Proteger contra desinstalação" ativa o
+  app como **administrador do dispositivo** — enquanto ativo, não dá para desinstalar
+  sem desativar o admin. Uso legítimo de controle parental, feito pelo responsável.
+- **Após reiniciar o aparelho:** o monitor do YouTube volta sozinho; o do Roblox exige
+  novo consentimento de captura, então o app envia uma notificação pedindo para reabrir.
+- **Notificações (Android 13+):** o app pede a permissão `POST_NOTIFICATIONS` na 1ª vez
+  (necessária para push e avisos).
+
 ## Limitações desta fase (a refinar)
 
 - Os **resource-ids do YouTube mudam** entre versões do app. A heurística busca ids
