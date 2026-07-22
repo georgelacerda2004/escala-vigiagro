@@ -83,8 +83,12 @@ curl -X POST "$SUPABASE_URL/functions/v1/ingest" \
   - 3.2 **push (FCM)** no celular do responsável. ✅ (`docs/push-fcm.md`)
   - 3.3 **onboarding + pareamento por QR + multi-filhos** no painel. ✅
   - 3.4 **assinatura (Stripe)** — checkout + webhook + status no painel. ✅ (`docs/billing-stripe.md`)
-  - 3.5 (a fazer) robustez do app (boot, Device Admin, Foreground YouTube).
+  - 3.5 **robustez do app** (Device Admin/anti-desinstalação, aviso no boot,
+    permissão de notificação) + **enforcement de assinatura** (opcional via
+    `ENFORCE_SUBSCRIPTION`). ✅
   - 3.6 (a fazer) iOS "light" (Screen Time + filtro).
+
+Guia de teste ponta a ponta: `docs/testes-hermes.md`.
 
 ## Aviso
 

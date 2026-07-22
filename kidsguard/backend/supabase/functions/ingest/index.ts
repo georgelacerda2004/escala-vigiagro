@@ -3,7 +3,9 @@
 // Fluxo: valida device_token -> grava activity_events -> pré-filtro ->
 //        IA classifica -> grava flags -> cria alerts (severidade alta).
 import { corsHeaders, json } from "../_shared/cors.ts";
-import { serviceClient, shouldClassify } from "../_shared/supabase.ts";
+import {
+  enforceSubscription, hasActiveSubscription, serviceClient, shouldClassify,
+} from "../_shared/supabase.ts";
 import { classifyText } from "../_shared/claude.ts";
 
 interface IncomingEvent {
@@ -40,6 +42,11 @@ Deno.serve(async (req) => {
     if (devErr || !device) return json({ error: "device_token inválido" }, 401);
 
     await db.from("devices").update({ last_seen_at: new Date().toISOString() }).eq("id", device.id);
+
+    // Assinatura: sem plano ativo, não processa (quando o enforcement está ligado).
+    if (enforceSubscription() && !(await hasActiveSubscription(db, device.child_id))) {
+      return json({ ok: true, skipped: "no_subscription" }, 402);
+    }
 
     const results: Array<{ event_id: string; flagged: boolean }> = [];
 

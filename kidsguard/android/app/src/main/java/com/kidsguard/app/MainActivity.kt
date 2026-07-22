@@ -1,8 +1,13 @@
 package com.kidsguard.app
 
+import android.Manifest
+import android.app.admin.DevicePolicyManager
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.media.projection.MediaProjectionManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
@@ -54,7 +59,31 @@ class MainActivity : AppCompatActivity() {
         val btnScanQr = findViewById<Button>(R.id.btnScanQr)
         val btnA11y = findViewById<Button>(R.id.btnOpenAccessibility)
         val btnRoblox = findViewById<Button>(R.id.btnStartRoblox)
+        val btnProtect = findViewById<Button>(R.id.btnProtect)
         val statusPairing = findViewById<TextView>(R.id.statusPairing)
+
+        // Android 13+: pede permissão de notificação (para push e avisos).
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+            != PackageManager.PERMISSION_GRANTED) {
+            requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 10)
+        }
+
+        // Proteção contra desinstalação (administrador do dispositivo).
+        val dpm = getSystemService(Context.DEVICE_POLICY_SERVICE) as DevicePolicyManager
+        val admin = ComponentName(this, KidsGuardDeviceAdminReceiver::class.java)
+        btnProtect.setOnClickListener {
+            if (dpm.isAdminActive(admin)) {
+                Toast.makeText(this, R.string.status_protected, Toast.LENGTH_SHORT).show()
+            } else {
+                startActivity(
+                    Intent(DevicePolicyManager.ACTION_ADD_DEVICE_ADMIN)
+                        .putExtra(DevicePolicyManager.EXTRA_DEVICE_ADMIN, admin)
+                        .putExtra(DevicePolicyManager.EXTRA_ADD_EXPLANATION,
+                            getString(R.string.device_admin_explain))
+                )
+            }
+        }
 
         // pré-preenche se já pareado
         Prefs.baseUrl(this)?.let { inputBaseUrl.setText(it) }

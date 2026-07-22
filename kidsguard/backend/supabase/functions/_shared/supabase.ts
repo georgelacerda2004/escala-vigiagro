@@ -23,3 +23,23 @@ export function shouldClassify(text: string | null | undefined): boolean {
   const t = text.toLowerCase();
   return HINT_TERMS.some((term) => t.includes(term));
 }
+
+// --- Enforcement de assinatura ---
+// Ligado só quando ENFORCE_SUBSCRIPTION=true (para não quebrar testes iniciais).
+export function enforceSubscription(): boolean {
+  return (Deno.env.get("ENFORCE_SUBSCRIPTION") ?? "").toLowerCase() === "true";
+}
+
+const ACTIVE_STATUSES = ["active", "trialing"];
+
+// A família da criança tem assinatura ativa?
+export async function hasActiveSubscription(
+  db: ReturnType<typeof serviceClient>,
+  childId: string,
+): Promise<boolean> {
+  const { data: child } = await db.from("children").select("parent_id").eq("id", childId).single();
+  if (!child) return false;
+  const { data: sub } = await db
+    .from("subscriptions").select("status").eq("parent_id", child.parent_id).maybeSingle();
+  return !!sub && ACTIVE_STATUSES.includes(sub.status);
+}
