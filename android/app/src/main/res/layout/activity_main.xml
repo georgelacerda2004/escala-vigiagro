@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="utf-8"?>
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="🛡️ KidsGuard"
+            android:textSize="26sp"
+            android:textStyle="bold"
+            android:paddingBottom="8dp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/pairing_title"
+            android:textSize="16sp"
+            android:paddingBottom="16dp" />
+
+        <EditText
+            android:id="@+id/inputBaseUrl"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_base_url"
+            android:inputType="textUri"
+            android:autofillHints="" />
+
+        <EditText
+            android:id="@+id/inputDeviceToken"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/hint_device_token"
+            android:inputType="text"
+            android:autofillHints=""
+            android:layout_marginTop="12dp" />
+
+        <Button
+            android:id="@+id/btnSave"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_save"
+            android:layout_marginTop="16dp" />
+
+        <TextView
+            android:id="@+id/statusPairing"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/status_not_paired"
+            android:layout_marginTop="12dp" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="#33888888"
+            android:layout_marginVertical="24dp" />
+
+        <Button
+            android:id="@+id/btnOpenAccessibility"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_open_accessibility" />
+
+        <TextView
+            android:id="@+id/statusService"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/status_service_off"
+            android:layout_marginTop="12dp" />
+    </LinearLayout>
+</ScrollView>
