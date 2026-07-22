@@ -19,11 +19,11 @@ classifica e gera alertas/resumos. Também detecta texto suspeito visível na te
 
 1. Abra a pasta `kidsguard/android/` no **Android Studio** (ele baixa o Gradle/deps).
 2. Rode em um **aparelho/emulador Android** (min. Android 8 / API 26).
-3. Na tela do app:
-   - **URL do backend:** `https://rgrhfiviaedpdlbchjyu.supabase.co`
-   - **Código do aparelho:** o `device_token` da criança. No teste, use
-     `dev_token_teste_123` (o do seed).
-   - Toque em **Salvar**.
+3. Na tela do app, **pareie** de uma das formas:
+   - **📷 Escanear QR** — no painel web (`/criancas`), crie a criança/aparelho e
+     escaneie o QR gerado. Preenche URL + token automaticamente. *(recomendado)*
+   - **Manual:** URL = `https://rgrhfiviaedpdlbchjyu.supabase.co`, código =
+     `device_token` (no teste, `dev_token_teste_123`), toque em **Salvar**.
 4. Toque em **Ativar monitoramento** → nas Configurações de Acessibilidade, ligue
    o **KidsGuard**.
 5. Abra o **YouTube** e assista a um vídeo.
