@@ -60,7 +60,7 @@ export default function Painel() {
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <h1>🛡️ KidsGuard</h1>
         <span className="muted">
-          <a href="/criancas">crianças</a> · {email} ·{" "}
+          <a href="/criancas">crianças</a> · <a href="/assinatura">assinatura</a> · {email} ·{" "}
           <a onClick={logout} style={{ cursor: "pointer" }}>sair</a>
         </span>
       </div>
