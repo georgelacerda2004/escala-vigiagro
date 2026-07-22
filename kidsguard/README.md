@@ -78,8 +78,13 @@ curl -X POST "$SUPABASE_URL/functions/v1/ingest" \
   controles parentais oficiais do Roblox documentados. ✅ (ver `docs/roblox.md`)
 - **Fase 2.1:** escalonamento por **visão do Claude** (`classify-image`) para frames
   que o OCR erra — acionado só quando o OCR falha e no máx. 1x/min. ✅
-- **Fase 3:** resistência a desinstalação, iOS (limitado), relatórios semanais,
-  multi-filhos, assinatura, compliance LGPD/lojas.
+- **Fase 3 (em andamento):**
+  - 3.1 segurança + privacidade (opt-in visão, retenção) + **alertas por e-mail**. ✅
+  - 3.2 **push (FCM)** no celular do responsável. ✅ (`docs/push-fcm.md`)
+  - 3.3 **onboarding + pareamento por QR + multi-filhos** no painel. ✅
+  - 3.4 **assinatura (Stripe)** — checkout + webhook + status no painel. ✅ (`docs/billing-stripe.md`)
+  - 3.5 (a fazer) robustez do app (boot, Device Admin, Foreground YouTube).
+  - 3.6 (a fazer) iOS "light" (Screen Time + filtro).
 
 ## Aviso
 

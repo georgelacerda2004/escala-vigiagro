@@ -23,3 +23,9 @@ verify_jwt = true    # TRANCADA — cron/serviço chamam com Bearer service-role
 
 [functions.notify]
 verify_jwt = true    # TRANCADA — cron/serviço chamam com Bearer service-role
+
+[functions.create-checkout]
+verify_jwt = true    # exige pai autenticado (JWT)
+
+[functions.stripe-webhook]
+verify_jwt = false   # validado pela assinatura do Stripe (stripe-signature)
