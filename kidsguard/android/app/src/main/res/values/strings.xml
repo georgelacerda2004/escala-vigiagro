@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">KidsGuard</string>
+    <string name="accessibility_label">KidsGuard — Monitor do YouTube</string>
+    <string name="accessibility_description">Observa títulos e canais assistidos no YouTube para o resumo e os alertas de segurança enviados ao responsável. Ativo e visível — não é oculto.</string>
+
+    <string name="pairing_title">Parear com a conta do responsável</string>
+    <string name="hint_base_url">URL do backend (ex.: https://SEU.supabase.co)</string>
+    <string name="hint_device_token">Código do aparelho (device token)</string>
+    <string name="btn_save">Salvar</string>
+    <string name="btn_open_accessibility">Ativar monitoramento (Acessibilidade)</string>
+    <string name="status_paired">✅ Pareado. Backend e token salvos.</string>
+    <string name="status_not_paired">Preencha a URL e o código do aparelho.</string>
+    <string name="status_service_on">✅ Monitoramento do YouTube ATIVO.</string>
+    <string name="status_service_off">⚠️ Monitoramento desligado — toque no botão para ativar na Acessibilidade.</string>
+</resources>
