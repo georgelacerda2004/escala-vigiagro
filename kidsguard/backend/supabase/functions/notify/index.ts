@@ -3,6 +3,7 @@
 // Chamada pelo cron (a cada 1 min) com Bearer service-role.
 import { corsHeaders, json } from "../_shared/cors.ts";
 import { serviceClient } from "../_shared/supabase.ts";
+import { sendPush } from "../_shared/fcm.ts";
 
 const SEV_LABEL: Record<string, string> = {
   low: "Baixo", medium: "Médio", high: "Alto", critical: "CRÍTICO",
@@ -71,7 +72,46 @@ Deno.serve(async (req) => {
       }
     }
 
-    return json({ ok: true, sent, failed });
+    // --- Push (FCM) ---  só roda se FCM_SERVICE_ACCOUNT estiver configurada.
+    let pushSent = 0, pushFailed = 0;
+    if (Deno.env.get("FCM_SERVICE_ACCOUNT")) {
+      const { data: pushAlerts } = await db
+        .from("alerts")
+        .select("id, flag_id, child_id")
+        .eq("channel", "push")
+        .eq("status", "pending")
+        .limit(50);
+
+      for (const a of pushAlerts ?? []) {
+        try {
+          const { data: flag } = await db
+            .from("flags").select("category, severity, explanation")
+            .eq("id", a.flag_id).single();
+          const { data: child } = await db
+            .from("children").select("name").eq("id", a.child_id).single();
+          const { data: devs } = await db
+            .from("devices").select("fcm_token")
+            .eq("child_id", a.child_id).not("fcm_token", "is", null);
+          if (!flag || !child) { pushFailed++; continue; }
+
+          const title = `🚨 ${child.name} — ${SEV_LABEL[flag.severity] ?? flag.severity}`;
+          const bodyText = flag.explanation ?? flag.category;
+          let anyOk = false;
+          for (const d of devs ?? []) {
+            if (d.fcm_token && await sendPush(d.fcm_token, title, bodyText)) anyOk = true;
+          }
+          await db.from("alerts")
+            .update({ status: anyOk ? "sent" : "failed", sent_at: new Date().toISOString() })
+            .eq("id", a.id);
+          anyOk ? pushSent++ : pushFailed++;
+        } catch (e) {
+          console.error("Falha push", a.id, String(e));
+          pushFailed++;
+        }
+      }
+    }
+
+    return json({ ok: true, sent, failed, pushSent, pushFailed });
   } catch (e) {
     return json({ error: String(e) }, 500);
   }

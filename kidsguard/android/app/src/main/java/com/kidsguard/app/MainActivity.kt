@@ -101,6 +101,13 @@ class MainActivity : AppCompatActivity() {
             if (isAccessibilityEnabled()) R.string.status_service_on
             else R.string.status_service_off
         )
+        // registra o token de push, se pareado e o Firebase estiver configurado
+        if (Prefs.isPaired(this)) {
+            try {
+                com.google.firebase.messaging.FirebaseMessaging.getInstance().token
+                    .addOnSuccessListener { ApiClient.registerFcmToken(this, it) }
+            } catch (_: Exception) { /* Firebase não configurado (sem google-services.json) */ }
+        }
     }
 
     private fun isAccessibilityEnabled(): Boolean {
