@@ -36,4 +36,9 @@ dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.12.0")
     // OCR on-device (grátis, offline) para ler o chat do Roblox a partir do screenshot.
     implementation("com.google.mlkit:text-recognition:16.0.1")
+    // Scanner de QR (pareamento) — CameraX + ML Kit barcode.
+    implementation("com.google.mlkit:barcode-scanning:17.3.0")
+    implementation("androidx.camera:camera-camera2:1.3.4")
+    implementation("androidx.camera:camera-lifecycle:1.3.4")
+    implementation("androidx.camera:camera-view:1.3.4")
 }

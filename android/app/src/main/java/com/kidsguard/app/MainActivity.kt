@@ -38,6 +38,12 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    // Reabre a tela após o scanner salvar URL+token, para refletir nos campos.
+    private val scanLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            if (result.resultCode == RESULT_OK) recreate()
+        }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -45,6 +51,7 @@ class MainActivity : AppCompatActivity() {
         val inputBaseUrl = findViewById<EditText>(R.id.inputBaseUrl)
         val inputToken = findViewById<EditText>(R.id.inputDeviceToken)
         val btnSave = findViewById<Button>(R.id.btnSave)
+        val btnScanQr = findViewById<Button>(R.id.btnScanQr)
         val btnA11y = findViewById<Button>(R.id.btnOpenAccessibility)
         val btnRoblox = findViewById<Button>(R.id.btnStartRoblox)
         val statusPairing = findViewById<TextView>(R.id.statusPairing)
@@ -53,6 +60,11 @@ class MainActivity : AppCompatActivity() {
         Prefs.baseUrl(this)?.let { inputBaseUrl.setText(it) }
         Prefs.token(this)?.let { inputToken.setText(it) }
         if (Prefs.isPaired(this)) statusPairing.setText(R.string.status_paired)
+
+        // escanear QR de pareamento (preenche URL + token automaticamente)
+        btnScanQr.setOnClickListener {
+            scanLauncher.launch(Intent(this, ScanActivity::class.java))
+        }
 
         btnSave.setOnClickListener {
             val url = inputBaseUrl.text.toString().trim()
