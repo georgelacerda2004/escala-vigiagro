@@ -12,4 +12,9 @@
     <string name="status_not_paired">Preencha a URL e o código do aparelho.</string>
     <string name="status_service_on">✅ Monitoramento do YouTube ATIVO.</string>
     <string name="status_service_off">⚠️ Monitoramento desligado — toque no botão para ativar na Acessibilidade.</string>
+
+    <string name="btn_start_roblox">Ativar monitor do Roblox (captura de tela)</string>
+    <string name="roblox_hint">O Roblox exige captura de tela para ler o chat. O Android pedirá sua permissão e mostrará um indicador de gravação enquanto ativo.</string>
+    <string name="status_roblox_on">✅ Monitor do Roblox iniciado.</string>
+    <string name="status_roblox_denied">Permissão de captura negada.</string>
 </resources>

@@ -22,6 +22,15 @@ class YouTubeAccessibilityService : AccessibilityService() {
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val pkg = event?.packageName?.toString() ?: return
+
+        // Roblox: não dá para ler o chat pelos nós (é desenhado pelo motor do jogo).
+        // Aqui só sinalizamos que o Roblox está em primeiro plano, para o
+        // ScreenCaptureService amostrar a tela + OCR enquanto ele estiver ativo.
+        if (pkg == "com.roblox.client") {
+            ScreenCaptureService.pingRobloxForeground()
+            return
+        }
+
         if (!pkg.startsWith("com.google.android")) return
 
         val root = rootInActiveWindow ?: return

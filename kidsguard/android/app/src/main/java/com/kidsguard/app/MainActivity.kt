@@ -1,6 +1,8 @@
 package com.kidsguard.app
 
+import android.content.Context
 import android.content.Intent
+import android.media.projection.MediaProjectionManager
 import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
@@ -9,7 +11,9 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 
 /**
  * Tela de pareamento + atalho para ativar o monitoramento.
@@ -17,6 +21,22 @@ import androidx.appcompat.app.AppCompatActivity
  * salva, e ativa o serviço de Acessibilidade.
  */
 class MainActivity : AppCompatActivity() {
+
+    // Recebe o resultado do pedido de captura de tela (MediaProjection).
+    private val projectionLauncher =
+        registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+            val statusRoblox = findViewById<TextView>(R.id.statusRoblox)
+            if (result.resultCode == RESULT_OK && result.data != null) {
+                val svc = Intent(this, ScreenCaptureService::class.java).apply {
+                    putExtra(ScreenCaptureService.EXTRA_RESULT_CODE, result.resultCode)
+                    putExtra(ScreenCaptureService.EXTRA_RESULT_DATA, result.data)
+                }
+                ContextCompat.startForegroundService(this, svc)
+                statusRoblox.setText(R.string.status_roblox_on)
+            } else {
+                statusRoblox.setText(R.string.status_roblox_denied)
+            }
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,6 +46,7 @@ class MainActivity : AppCompatActivity() {
         val inputToken = findViewById<EditText>(R.id.inputDeviceToken)
         val btnSave = findViewById<Button>(R.id.btnSave)
         val btnA11y = findViewById<Button>(R.id.btnOpenAccessibility)
+        val btnRoblox = findViewById<Button>(R.id.btnStartRoblox)
         val statusPairing = findViewById<TextView>(R.id.statusPairing)
 
         // pré-preenche se já pareado
@@ -48,6 +69,16 @@ class MainActivity : AppCompatActivity() {
         // abre as configurações de Acessibilidade para o usuário ligar o serviço
         btnA11y.setOnClickListener {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
+        }
+
+        // inicia o monitor do Roblox: pede permissão de captura de tela
+        btnRoblox.setOnClickListener {
+            if (!Prefs.isPaired(this)) {
+                Toast.makeText(this, R.string.status_not_paired, Toast.LENGTH_SHORT).show()
+                return@setOnClickListener
+            }
+            val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
+            projectionLauncher.launch(mpm.createScreenCaptureIntent())
         }
     }
 
