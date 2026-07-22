@@ -12,5 +12,8 @@ verify_jwt = false   # autenticado por x-device-token (não por JWT de usuário)
 [functions.classify]
 verify_jwt = false   # endpoint de teste
 
+[functions.classify-image]
+verify_jwt = false   # autenticado por x-device-token (reforço por visão)
+
 [functions.summarize]
 verify_jwt = false   # chamado por cron/service role

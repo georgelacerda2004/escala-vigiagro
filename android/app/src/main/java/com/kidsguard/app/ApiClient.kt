@@ -70,4 +70,37 @@ object ApiClient {
             }
         })
     }
+
+    /**
+     * Envia um screenshot (base64, sem prefixo) para `classify-image` — reforço por
+     * visão do Roblox quando o OCR não conseguiu ler. A imagem não é armazenada.
+     */
+    fun sendImage(ctx: Context, base64: String, mediaType: String = "image/jpeg") {
+        val baseUrl = Prefs.baseUrl(ctx)
+        val token = Prefs.token(ctx)
+        if (baseUrl.isNullOrBlank() || token.isNullOrBlank()) return
+
+        val body = JSONObject().apply {
+            put("image_base64", base64)
+            put("media_type", mediaType)
+        }
+        val req = Request.Builder()
+            .url("$baseUrl/functions/v1/classify-image")
+            .header("content-type", "application/json")
+            .header("x-device-token", token)
+            .post(body.toString().toRequestBody(JSON))
+            .build()
+
+        http.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.w(TAG, "Falha ao enviar imagem: ${e.message}")
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use {
+                    if (!it.isSuccessful) Log.w(TAG, "classify-image HTTP ${it.code}")
+                    else Log.d(TAG, "Frame enviado para visão.")
+                }
+            }
+        })
+    }
 }

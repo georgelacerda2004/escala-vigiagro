@@ -18,8 +18,10 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Base64
 import android.util.DisplayMetrics
 import android.util.Log
+import java.io.ByteArrayOutputStream
 import android.view.WindowManager
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
@@ -42,6 +44,8 @@ class ScreenCaptureService : Service() {
         private const val SAMPLE_INTERVAL_MS = 5000L
         private const val ROBLOX_STALE_MS = 15000L   // sem sinal do Roblox por 15s = pausa
         private const val DOWNSCALE = 2               // 1/2 da resolução (economia)
+        private const val VISION_INTERVAL_MS = 60000L // no máx. 1 escalonamento/min (custo)
+        private const val WEAK_OCR_CHARS = 15         // OCR "fraco" = provável falha de leitura
 
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
@@ -59,6 +63,7 @@ class ScreenCaptureService : Service() {
     private val handler = Handler(Looper.getMainLooper())
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
     private val recentLines = ArrayDeque<String>()   // dedup das últimas linhas enviadas
+    private var lastVisionMs = 0L
     private var width = 0
     private var height = 0
     private var dpi = 0
@@ -124,7 +129,10 @@ class ScreenCaptureService : Service() {
             bmp.copyPixelsFromBuffer(plane.buffer)
 
             recognizer.process(InputImage.fromBitmap(bmp, 0))
-                .addOnSuccessListener { result -> handleOcr(result.text) }
+                .addOnSuccessListener { result ->
+                    handleOcr(result.text)
+                    maybeEscalateToVision(result.text, bmp)
+                }
                 .addOnFailureListener { e -> Log.w(TAG, "OCR falhou: ${e.message}") }
         } catch (e: Exception) {
             Log.w(TAG, "Erro na captura: ${e.message}")
@@ -149,6 +157,28 @@ class ScreenCaptureService : Service() {
                     this, app = "roblox", eventType = "chat", contentText = line,
                 )
             }
+        }
+    }
+
+    /**
+     * Reforço por visão: quando o OCR leu POUCO texto (provável chat gráfico que ele
+     * não decifra), envia o frame ao Claude-visão. Rate-limit de 1x/min para conter custo.
+     */
+    private fun maybeEscalateToVision(ocrText: String, bmp: Bitmap) {
+        if (ocrText.trim().length >= WEAK_OCR_CHARS) return
+        if (!robloxIsForeground()) return
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastVisionMs < VISION_INTERVAL_MS) return
+        lastVisionMs = now
+
+        try {
+            val out = ByteArrayOutputStream()
+            bmp.compress(Bitmap.CompressFormat.JPEG, 60, out)
+            val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
+            Log.d(TAG, "OCR fraco → escalonando para visão do Claude.")
+            ApiClient.sendImage(this, base64, "image/jpeg")
+        } catch (e: Exception) {
+            Log.w(TAG, "Falha ao preparar imagem: ${e.message}")
         }
     }
 

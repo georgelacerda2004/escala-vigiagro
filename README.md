@@ -76,7 +76,8 @@ curl -X POST "$SUPABASE_URL/functions/v1/ingest" \
   resumo diário. ✅
 - **Fase 2:** Roblox via **captura de tela + OCR on-device** (reusa a `ingest`);
   controles parentais oficiais do Roblox documentados. ✅ (ver `docs/roblox.md`)
-- **Fase 2.1 (opcional):** escalonamento por **visão do Claude** para frames que o OCR erra.
+- **Fase 2.1:** escalonamento por **visão do Claude** (`classify-image`) para frames
+  que o OCR erra — acionado só quando o OCR falha e no máx. 1x/min. ✅
 - **Fase 3:** resistência a desinstalação, iOS (limitado), relatórios semanais,
   multi-filhos, assinatura, compliance LGPD/lojas.
 

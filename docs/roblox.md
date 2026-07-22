@@ -40,12 +40,25 @@ não por componentes nativos do Android. Logo, a única forma de ler o chat é
 - Notificação do Foreground Service: no Android 13+ pode exigir a permissão
   `POST_NOTIFICATIONS` concedida em runtime para aparecer.
 
-## Escalonamento por visão (Fase 2.1, opcional)
+## Escalonamento por visão (Fase 2.1) ✅ construído
 
-Para os casos que o OCR erra, dá para enviar o frame ao **Claude com visão**:
-- `_shared/claude.ts` → função `classifyImage(base64)` (bloco `image` + mesmo schema).
-- `functions/classify-image/index.ts` → recebe base64, classifica, **não guarda a
-  imagem**. Usar só quando o OCR marcar dúvida, para conter custo e exposição.
+Para os casos que o OCR erra, o frame vai ao **Claude com visão**:
+- `_shared/claude.ts` → `classifyImage(base64, mediaType)` (bloco `image` + mesmo schema).
+- `functions/classify-image/index.ts` → autentica por `x-device-token`, classifica,
+  e se for risco grava `activity_event` + `flag` + `alert`. **Não guarda a imagem.**
+- **App:** o `ScreenCaptureService` só escala para visão quando o **OCR leu pouco
+  texto** (`< 15` chars = provável chat gráfico), e **no máximo 1x/min** — assim o
+  custo fica contido e a maioria dos frames é resolvida de graça pelo OCR.
+
+### Testar a visão (sem Android)
+```bash
+# base64 de um print com texto suspeito:
+B64=$(base64 -w0 print_teste.png)
+curl -X POST "$SUPABASE_URL/functions/v1/classify-image" \
+  -H "content-type: application/json" \
+  -H "x-device-token: dev_token_teste_123" \
+  -d "{\"image_base64\":\"$B64\",\"media_type\":\"image/png\"}"
+```
 
 ## Base de segurança: controles parentais OFICIAIS do Roblox
 

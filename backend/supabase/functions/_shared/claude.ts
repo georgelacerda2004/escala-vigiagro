@@ -96,6 +96,56 @@ export async function classifyText(
   return JSON.parse(block.text) as Classification;
 }
 
+// Classificação por VISÃO — analisa um screenshot (ex.: chat do Roblox que o OCR
+// não conseguiu ler). Recebe a imagem em base64 (sem o prefixo data:).
+export async function classifyImage(
+  base64: string,
+  mediaType = "image/png",
+  ctx?: { app?: string },
+): Promise<Classification> {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
+
+  const res = await fetch(ANTHROPIC_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 1024,
+      output_config: {
+        effort: "low",
+        format: { type: "json_schema", schema: CLASSIFICATION_SCHEMA },
+      },
+      system: SYSTEM_PROMPT,
+      messages: [{
+        role: "user",
+        content: [
+          {
+            type: "image",
+            source: { type: "base64", media_type: mediaType, data: base64 },
+          },
+          {
+            type: "text",
+            text: `App: ${ctx?.app ?? "roblox"}. Esta é uma captura de tela do jogo/` +
+              `app da criança. Leia QUALQUER texto de chat/mensagem visível e ` +
+              `classifique o risco. Se não houver texto de risco, use is_concerning=false.`,
+          },
+        ],
+      }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const block = data.content?.find((b: { type: string }) => b.type === "text");
+  if (!block?.text) throw new Error("Resposta da IA (visão) sem bloco de texto");
+  return JSON.parse(block.text) as Classification;
+}
+
 // Resumo diário em linguagem natural (pt-BR).
 export async function summarizeDay(
   childName: string,
