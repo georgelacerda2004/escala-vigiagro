@@ -35,6 +35,20 @@ classifica e gera alertas/resumos. Também detecta texto suspeito visível na te
   recebe as linhas; se algo suspeito aparecer, vira `flags`/`alerts`.
 - No **painel web**, o vídeo entra na timeline e o resumo do dia passa a incluí-lo.
 
+## Testar o monitor do Roblox (Fase 2)
+
+1. Faça o pareamento (URL + token) e ative a Acessibilidade (passos acima).
+2. Toque em **"Ativar monitor do Roblox (captura de tela)"** → aceite o pedido de
+   captura do Android (aparece um indicador de gravação de tela).
+3. Abra o **Roblox**, entre num jogo com chat e digite algo suspeito
+   (ex.: `me passa seu whats` ou `quantos anos vc tem`).
+4. No **Logcat** (filtro `KidsGuard/Capture`) deve aparecer `Chat suspeito (OCR): '...'`,
+   e o evento chega na `ingest` → vira `flag`/`alert` no painel.
+
+Como funciona: um Foreground Service segura o `MediaProjection`, tira ~1 screenshot a
+cada 5s **só com o Roblox aberto**, roda **OCR (ML Kit, offline)** e envia à nuvem
+apenas o texto suspeito. Nenhuma imagem é armazenada. Detalhes em `../docs/roblox.md`.
+
 ## Limitações desta fase (a refinar)
 
 - Os **resource-ids do YouTube mudam** entre versões do app. A heurística busca ids

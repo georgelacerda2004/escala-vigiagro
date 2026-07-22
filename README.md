@@ -72,8 +72,11 @@ curl -X POST "$SUPABASE_URL/functions/v1/ingest" \
 
 ## Roadmap
 
-- **Fase 1 (MVP):** YouTube no Android + esteira de IA + painel + alertas. ← *estamos aqui*
-- **Fase 2:** Roblox via captura de tela + OCR/visão; controles parentais oficiais.
+- **Fase 1 (MVP):** YouTube no Android + esteira de IA + painel + alertas + cron do
+  resumo diário. ✅
+- **Fase 2:** Roblox via **captura de tela + OCR on-device** (reusa a `ingest`);
+  controles parentais oficiais do Roblox documentados. ✅ (ver `docs/roblox.md`)
+- **Fase 2.1 (opcional):** escalonamento por **visão do Claude** para frames que o OCR erra.
 - **Fase 3:** resistência a desinstalação, iOS (limitado), relatórios semanais,
   multi-filhos, assinatura, compliance LGPD/lojas.
 
