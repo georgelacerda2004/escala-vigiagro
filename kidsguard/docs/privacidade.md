@@ -46,5 +46,8 @@ oficiais** quando existirem, e posicionar a captura como assistência ao respons
 
 - [ ] Política de Privacidade e Termos de Uso revisados por advogado.
 - [ ] Fluxo de consentimento parental no onboarding.
-- [ ] Configuração de retenção e expurgo automático.
+- [x] Configuração de retenção e expurgo automático — cron diário apaga
+      `activity_events` com >30 dias (`0004_retention.sql`).
+- [x] Opt-in da visão (captura de tela) desligado por padrão
+      (`devices.vision_enabled`, gate na `classify-image`).
 - [ ] Encarregado/contato (DPO) e canal de solicitação de titular.
