@@ -71,6 +71,29 @@ object ApiClient {
         })
     }
 
+    /** Registra o token FCM do aparelho para receber push. */
+    fun registerFcmToken(ctx: Context, fcmToken: String) {
+        val baseUrl = Prefs.baseUrl(ctx)
+        val token = Prefs.token(ctx)
+        if (baseUrl.isNullOrBlank() || token.isNullOrBlank()) return
+
+        val body = JSONObject().put("fcm_token", fcmToken)
+        val req = Request.Builder()
+            .url("$baseUrl/functions/v1/register-token")
+            .header("content-type", "application/json")
+            .header("x-device-token", token)
+            .post(body.toString().toRequestBody(JSON))
+            .build()
+        http.newCall(req).enqueue(object : Callback {
+            override fun onFailure(call: Call, e: IOException) {
+                Log.w(TAG, "Falha ao registrar FCM: ${e.message}")
+            }
+            override fun onResponse(call: Call, response: Response) {
+                response.use { Log.d(TAG, "FCM token registrado (${it.code}).") }
+            }
+        })
+    }
+
     /**
      * Envia um screenshot (base64, sem prefixo) para `classify-image` — reforço por
      * visão do Roblox quando o OCR não conseguiu ler. A imagem não é armazenada.

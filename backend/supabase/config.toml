@@ -15,6 +15,9 @@ verify_jwt = true    # TRANCADA (era so teste) — exige Bearer JWT valido
 [functions.classify-image]
 verify_jwt = false   # autenticado por x-device-token (reforço por visão)
 
+[functions.register-token]
+verify_jwt = false   # autenticado por x-device-token (registro de push FCM)
+
 [functions.summarize]
 verify_jwt = true    # TRANCADA — cron/serviço chamam com Bearer service-role
 
