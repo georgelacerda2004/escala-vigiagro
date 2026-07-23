@@ -3,6 +3,11 @@
     <string name="accessibility_label">KidsGuard — Monitor do YouTube</string>
     <string name="accessibility_description">Observa títulos e canais assistidos no YouTube para o resumo e os alertas de segurança enviados ao responsável. Ativo e visível — não é oculto.</string>
 
+    <string name="consent_title">Consentimento do responsável</string>
+    <string name="consent_checkbox">Sou o responsável legal por esta criança e autorizo o monitoramento deste aparelho pelo KidsGuard. Li a Política de Privacidade e os Termos de Uso.</string>
+    <string name="consent_required">É preciso marcar o consentimento do responsável antes de ativar o monitoramento.</string>
+    <string name="consent_links">Leia a Política de Privacidade e os Termos de Uso no painel do responsável.</string>
+
     <string name="pairing_title">Parear com a conta do responsável</string>
     <string name="hint_base_url">URL do backend (ex.: https://SEU.supabase.co)</string>
     <string name="hint_device_token">Código do aparelho (device token)</string>
