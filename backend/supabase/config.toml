@@ -24,6 +24,9 @@ verify_jwt = true    # TRANCADA — cron/serviço chamam com Bearer service-role
 [functions.notify]
 verify_jwt = true    # TRANCADA — cron/serviço chamam com Bearer service-role
 
+[functions.weekly-summary]
+verify_jwt = true    # TRANCADA — cron/serviço chamam com Bearer service-role
+
 [functions.create-checkout]
 verify_jwt = true    # exige pai autenticado (JWT)
 
