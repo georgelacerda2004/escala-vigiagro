@@ -33,8 +33,9 @@ não por componentes nativos do Android. Logo, a única forma de ler o chat é
 
 - O OCR depende da nitidez/fonte do chat. Fontes estilizadas ou sobreposição podem
   falhar → ver "Escalonamento por visão" abaixo.
-- Detecção de foreground por heurística (ping + timeout de 15s). Refino possível:
-  `UsageStatsManager` ou ampliar a detecção de app ativo.
+- ~~Detecção de foreground por heurística (ping + timeout de 15s).~~ **Corrigido:**
+  agora usa `UsageStatsManager` (exige o usuário conceder "Acesso de uso"); o ping do
+  a11y fica como reforço. Captura em **resolução cheia** (melhor OCR) e amostra a cada 3s.
 - Sem recorte fixo da região do chat ainda — hoje faz OCR do frame todo e filtra por
   linha. Próximo passo: recortar a área do chat para reduzir ruído.
 - Notificação do Foreground Service: no Android 13+ pode exigir a permissão

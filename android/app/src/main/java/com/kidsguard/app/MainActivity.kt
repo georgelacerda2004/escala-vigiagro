@@ -1,6 +1,7 @@
 package com.kidsguard.app
 
 import android.Manifest
+import android.app.AppOpsManager
 import android.app.admin.DevicePolicyManager
 import android.content.ComponentName
 import android.content.Context
@@ -115,15 +116,32 @@ class MainActivity : AppCompatActivity() {
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
 
-        // inicia o monitor do Roblox: pede permissão de captura de tela
+        // inicia o monitor do Roblox: exige "acesso de uso" + captura de tela
         btnRoblox.setOnClickListener {
             if (!Prefs.isPaired(this)) {
                 Toast.makeText(this, R.string.status_not_paired, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
             }
+            // 1) acesso de uso (para detectar o Roblox em primeiro plano de forma confiável)
+            if (!hasUsageAccess()) {
+                Toast.makeText(this, R.string.need_usage_access, Toast.LENGTH_LONG).show()
+                startActivity(Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS))
+                return@setOnClickListener
+            }
+            // 2) captura de tela
             val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             projectionLauncher.launch(mpm.createScreenCaptureIntent())
         }
+    }
+
+    /** O KidsGuard tem permissão de "acesso de uso" (PACKAGE_USAGE_STATS)? */
+    private fun hasUsageAccess(): Boolean {
+        val appOps = getSystemService(Context.APP_OPS_SERVICE) as AppOpsManager
+        @Suppress("DEPRECATION")
+        val mode = appOps.checkOpNoThrow(
+            AppOpsManager.OPSTR_GET_USAGE_STATS, android.os.Process.myUid(), packageName
+        )
+        return mode == AppOpsManager.MODE_ALLOWED
     }
 
     override fun onResume() {

@@ -4,6 +4,8 @@ import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.Service
+import android.app.usage.UsageEvents
+import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
@@ -29,8 +31,11 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 /**
  * Foreground Service que segura o MediaProjection e, ENQUANTO o Roblox está em
- * primeiro plano, tira 1 screenshot a cada ~5s, roda OCR (ML Kit, offline) e envia
+ * primeiro plano, tira 1 screenshot a cada ~3s, roda OCR (ML Kit, offline) e envia
  * o texto do chat para a `ingest` (mesma esteira do YouTube).
+ *
+ * Detecção de foreground: usa UsageStatsManager (confiável), pois o Roblox quase não
+ * emite eventos de acessibilidade. O "ping" do a11y é mantido como reforço.
  *
  * Privacidade: a imagem é processada e DESCARTADA na hora — nada é guardado. Só sobe
  * para a nuvem o texto que passa no pré-filtro.
@@ -41,19 +46,19 @@ class ScreenCaptureService : Service() {
         private const val TAG = "KidsGuard/Capture"
         private const val CHANNEL_ID = "kidsguard_capture"
         private const val NOTIF_ID = 42
-        private const val SAMPLE_INTERVAL_MS = 5000L
-        private const val ROBLOX_STALE_MS = 15000L   // sem sinal do Roblox por 15s = pausa
-        private const val DOWNSCALE = 2               // 1/2 da resolução (economia)
+        private const val SAMPLE_INTERVAL_MS = 3000L
+        private const val ROBLOX_STALE_MS = 15000L   // reforço via ping do a11y
         private const val VISION_INTERVAL_MS = 60000L // no máx. 1 escalonamento/min (custo)
         private const val WEAK_OCR_CHARS = 15         // OCR "fraco" = provável falha de leitura
+        private const val ROBLOX_PKG = "com.roblox.client"
 
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
 
-        // Sinal vindo do AccessibilityService: "o Roblox está ativo agora".
+        // Reforço vindo do AccessibilityService.
         @Volatile private var lastRobloxPingMs = 0L
         fun pingRobloxForeground() { lastRobloxPingMs = SystemClock.elapsedRealtime() }
-        private fun robloxIsForeground(): Boolean =
+        private fun pingFresh(): Boolean =
             SystemClock.elapsedRealtime() - lastRobloxPingMs < ROBLOX_STALE_MS
     }
 
@@ -97,8 +102,9 @@ class ScreenCaptureService : Service() {
         val metrics = DisplayMetrics()
         val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         @Suppress("DEPRECATION") wm.defaultDisplay.getRealMetrics(metrics)
-        width = metrics.widthPixels / DOWNSCALE
-        height = metrics.heightPixels / DOWNSCALE
+        // Resolução CHEIA — o texto do chat do Roblox é pequeno; reduzir atrapalha o OCR.
+        width = metrics.widthPixels
+        height = metrics.heightPixels
         dpi = metrics.densityDpi
 
         imageReader = ImageReader.newInstance(width, height, PixelFormat.RGBA_8888, 2)
@@ -109,15 +115,40 @@ class ScreenCaptureService : Service() {
         )
     }
 
+    /** App atualmente em foreground segundo o UsageStats (null se sem permissão/dado). */
+    private fun currentForegroundApp(): String? {
+        return try {
+            val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
+            val now = System.currentTimeMillis()
+            val events = usm.queryEvents(now - 10_000, now)
+            var pkg: String? = null
+            val e = UsageEvents.Event()
+            while (events.hasNextEvent()) {
+                events.getNextEvent(e)
+                if (e.eventType == UsageEvents.Event.MOVE_TO_FOREGROUND) pkg = e.packageName
+            }
+            pkg
+        } catch (_: Exception) { null }
+    }
+
+    private fun robloxActive(): Boolean {
+        val fg = currentForegroundApp()
+        // Se o UsageStats respondeu, ele manda; senão, cai no reforço do ping do a11y.
+        val active = if (fg != null) fg == ROBLOX_PKG else pingFresh()
+        Log.d(TAG, "tick foreground=${fg ?: "?"} robloxActive=$active")
+        return active
+    }
+
     private val sampleLoop = object : Runnable {
         override fun run() {
-            if (robloxIsForeground()) captureAndOcr()
+            if (robloxActive()) captureAndOcr()
             handler.postDelayed(this, SAMPLE_INTERVAL_MS)
         }
     }
 
     private fun captureAndOcr() {
-        val image = imageReader?.acquireLatestImage() ?: return
+        val image = imageReader?.acquireLatestImage()
+        if (image == null) { Log.d(TAG, "sem frame disponível"); return }
         try {
             val plane = image.planes[0]
             val rowStride = plane.rowStride
@@ -130,6 +161,7 @@ class ScreenCaptureService : Service() {
 
             recognizer.process(InputImage.fromBitmap(bmp, 0))
                 .addOnSuccessListener { result ->
+                    Log.d(TAG, "OCR len=${result.text.length}")
                     handleOcr(result.text)
                     maybeEscalateToVision(result.text, bmp)
                 }
@@ -147,7 +179,6 @@ class ScreenCaptureService : Service() {
             val line = raw.trim()
             if (line.length < 4) continue
             if (recentLines.contains(line)) continue
-            // marca como visto (janela de dedup de ~40 linhas)
             recentLines.addLast(line)
             if (recentLines.size > 40) recentLines.removeFirst()
 
@@ -166,14 +197,13 @@ class ScreenCaptureService : Service() {
      */
     private fun maybeEscalateToVision(ocrText: String, bmp: Bitmap) {
         if (ocrText.trim().length >= WEAK_OCR_CHARS) return
-        if (!robloxIsForeground()) return
         val now = SystemClock.elapsedRealtime()
         if (now - lastVisionMs < VISION_INTERVAL_MS) return
         lastVisionMs = now
 
         try {
             val out = ByteArrayOutputStream()
-            bmp.compress(Bitmap.CompressFormat.JPEG, 60, out)
+            bmp.compress(Bitmap.CompressFormat.JPEG, 70, out)
             val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
             Log.d(TAG, "OCR fraco → escalonando para visão do Claude.")
             ApiClient.sendImage(this, base64, "image/jpeg")

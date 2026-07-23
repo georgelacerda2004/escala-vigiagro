@@ -19,6 +19,7 @@
     <string name="roblox_hint">O Roblox exige captura de tela para ler o chat. O Android pedirá sua permissão e mostrará um indicador de gravação enquanto ativo.</string>
     <string name="status_roblox_on">✅ Monitor do Roblox iniciado.</string>
     <string name="status_roblox_denied">Permissão de captura negada.</string>
+    <string name="need_usage_access">Ative o \"Acesso de uso\" para o KidsGuard nesta tela e volte para iniciar o monitor do Roblox.</string>
 
     <string name="btn_protect">🔒 Proteger contra desinstalação</string>
     <string name="device_admin_explain">Ative para impedir que o KidsGuard seja desinstalado sem a sua autorização, mantendo o monitoramento do seu filho.</string>
