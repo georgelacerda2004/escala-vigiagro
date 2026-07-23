@@ -7,38 +7,33 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import com.google.firebase.messaging.FirebaseMessagingService
-import com.google.firebase.messaging.RemoteMessage
 
-/** Recebe o token FCM e as notificações de push do KidsGuard. */
-class KidsGuardMessagingService : FirebaseMessagingService() {
+/**
+ * Gerencia notificacoes locais do KidsGuard.
+ * (Push FCM sera reativado quando o Firebase for configurado.)
+ */
+object KidsGuardNotifications {
 
-    private val CHANNEL_ID = "kidsguard_alerts"
+    private const val CHANNEL_ID = "kidsguard_alerts"
 
-    override fun onNewToken(token: String) {
-        // registra no backend (se já pareado)
-        ApiClient.registerFcmToken(this, token)
-    }
-
-    override fun onMessageReceived(message: RemoteMessage) {
-        val title = message.notification?.title ?: "KidsGuard"
-        val body = message.notification?.body ?: ""
-        showNotification(title, body)
-    }
-
-    private fun showNotification(title: String, body: String) {
-        val nm = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    fun createChannel(ctx: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
             nm.createNotificationChannel(
                 NotificationChannel(CHANNEL_ID, "Alertas KidsGuard",
                     NotificationManager.IMPORTANCE_HIGH)
             )
         }
+    }
+
+    fun show(ctx: Context, title: String, body: String) {
+        createChannel(ctx)
+        val nm = ctx.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val pi = PendingIntent.getActivity(
-            this, 0, Intent(this, MainActivity::class.java),
+            ctx, 0, Intent(ctx, MainActivity::class.java),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        val notif = NotificationCompat.Builder(this, CHANNEL_ID)
+        val notif = NotificationCompat.Builder(ctx, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setContentTitle(title)
             .setContentText(body)

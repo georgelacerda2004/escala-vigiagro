@@ -27,6 +27,9 @@ import androidx.core.content.ContextCompat
  */
 class MainActivity : AppCompatActivity() {
 
+    /** Flag para detectar quando o serviço de acessibilidade é ATIVADO vindo das Config. */
+    private var wasA11yEnabled = false
+
     // Recebe o resultado do pedido de captura de tela (MediaProjection).
     private val projectionLauncher =
         registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -126,16 +129,19 @@ class MainActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         val statusService = findViewById<TextView>(R.id.statusService)
+        val nowEnabled = isAccessibilityEnabled()
         statusService.setText(
-            if (isAccessibilityEnabled()) R.string.status_service_on
+            if (nowEnabled) R.string.status_service_on
             else R.string.status_service_off
         )
-        // registra o token de push, se pareado e o Firebase estiver configurado
+        // Toast de boas-vindas quando o usuário ativa o serviço vindo das Config.
+        if (nowEnabled && !wasA11yEnabled) {
+            Toast.makeText(this, R.string.toast_service_activated, Toast.LENGTH_LONG).show()
+        }
+        wasA11yEnabled = nowEnabled
+        // registra o token de push se pareado (FCM sera reativado depois)
         if (Prefs.isPaired(this)) {
-            try {
-                com.google.firebase.messaging.FirebaseMessaging.getInstance().token
-                    .addOnSuccessListener { ApiClient.registerFcmToken(this, it) }
-            } catch (_: Exception) { /* Firebase não configurado (sem google-services.json) */ }
+            // FCM desativado temporariamente — sem Firebase
         }
     }
 
