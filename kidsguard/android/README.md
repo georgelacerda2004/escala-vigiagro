@@ -38,12 +38,24 @@ classifica e gera alertas/resumos. Também detecta texto suspeito visível na te
 ## Testar o monitor do Roblox (Fase 2)
 
 1. Faça o pareamento (URL + token) e ative a Acessibilidade (passos acima).
-2. Toque em **"Ativar monitor do Roblox (captura de tela)"** → aceite o pedido de
-   captura do Android (aparece um indicador de gravação de tela).
+2. Toque em **"Ativar monitor do Roblox (captura de tela)"**.
+   - Na 1ª vez ele abre **"Acesso de uso"** → ative o **KidsGuard** e volte
+     (necessário para detectar o Roblox em primeiro plano de forma confiável).
+   - Toque de novo → aceite o pedido de **captura de tela** (indicador de gravação).
 3. Abra o **Roblox**, entre num jogo com chat e digite algo suspeito
    (ex.: `me passa seu whats` ou `quantos anos vc tem`).
-4. No **Logcat** (filtro `KidsGuard/Capture`) deve aparecer `Chat suspeito (OCR): '...'`,
-   e o evento chega na `ingest` → vira `flag`/`alert` no painel.
+4. No **Logcat** (filtro `KidsGuard/Capture`) você deve ver, a cada ~3s:
+   - `tick foreground=com.roblox.client robloxActive=true`
+   - `OCR len=NN` (quanto o OCR leu naquele frame)
+   - `Chat suspeito (OCR): '...'` quando bater no pré-filtro → vira `flag`/`alert`.
+5. **Reforço por visão** (quando o OCR lê pouco): habilite o opt-in no aparelho de teste:
+   `update devices set vision_enabled=true where device_token='dev_token_teste_123';`
+
+**Diagnóstico rápido pelo Logcat:**
+- `foreground=?` sempre → falta conceder **Acesso de uso**.
+- `robloxActive=false` com Roblox aberto → idem (ou UsageStats atrasado).
+- `OCR len=0` sempre → captura vindo preta (raro) ou tela sem texto.
+- `OCR len>0` mas nada sobe → o texto não bateu no pré-filtro (me manda o log que ajusto).
 
 Como funciona: um Foreground Service segura o `MediaProjection`, tira ~1 screenshot a
 cada 5s **só com o Roblox aberto**, roda **OCR (ML Kit, offline)** e envia à nuvem
