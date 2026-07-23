@@ -38,6 +38,9 @@ export default function LoginPage() {
           {error && <p style={{ color: "var(--critical)" }}>{error}</p>}
         </form>
       )}
+      <p className="muted" style={{ marginTop: 24 }}>
+        <a href="/privacidade">Política de Privacidade</a> · <a href="/termos">Termos de Uso</a>
+      </p>
     </main>
   );
 }
