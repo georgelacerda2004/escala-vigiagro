@@ -87,6 +87,13 @@ curl -X POST "$SUPABASE_URL/functions/v1/ingest" \
     permissão de notificação) + **enforcement de assinatura** (opcional via
     `ENFORCE_SUBSCRIPTION`). ✅
   - 3.6 (a fazer) iOS "light" (Screen Time + filtro).
+- **Prontidão de lançamento:**
+  - **Consentimento do responsável** no app (trava os monitores até o aceite). ✅
+  - **Política de Privacidade** (`/privacidade`) e **Termos** (`/termos`) no painel
+    (modelo pt-BR — revisar com advogado). ✅
+  - **Relatório semanal** (`weekly-summary` + cron de segunda) exibido no painel. ✅
+  - **Filtro por criança** no painel (alertas/resumos). ✅
+  - Checklist de publicação na Play: `docs/publicar-playstore.md`. ✅
 
 Guia de teste ponta a ponta: `docs/testes-hermes.md`.
 
