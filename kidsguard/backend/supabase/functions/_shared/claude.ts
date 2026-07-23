@@ -182,3 +182,45 @@ export async function summarizeDay(
   const block = data.content?.find((b: { type: string }) => b.type === "text");
   return block?.text ?? "";
 }
+
+// Resumo SEMANAL em linguagem natural (pt-BR). Recebe os totais da semana e os
+// alertas do período para dar ao pai/mãe uma visão consolidada de 7 dias.
+export async function summarizeWeek(
+  childName: string,
+  weekStart: string,
+  weekEnd: string,
+  events: Array<{ app: string; event_type: string; video_title?: string; channel?: string; content_text?: string }>,
+  flags: Array<{ category: string; severity: string; explanation: string }>,
+): Promise<string> {
+  const apiKey = Deno.env.get("ANTHROPIC_API_KEY");
+  if (!apiKey) throw new Error("ANTHROPIC_API_KEY não configurada");
+
+  const userContent =
+    `Gere um resumo SEMANAL (pt-BR) para o pai/mãe sobre a atividade de ${childName} ` +
+    `no período de ${weekStart} a ${weekEnd}.\n\n` +
+    `Eventos da semana (${events.length}):\n${JSON.stringify(events).slice(0, 9000)}\n\n` +
+    `Alertas da semana (${flags.length}):\n${JSON.stringify(flags).slice(0, 5000)}\n\n` +
+    `Escreva 1 a 2 parágrafos: os principais canais/jogos e padrões da semana, ` +
+    `a evolução em relação a riscos, e destaque com clareza os alertas mais graves. ` +
+    `Se a semana foi tranquila, tranquilize e reforce boas práticas.`;
+
+  const res = await fetch(ANTHROPIC_URL, {
+    method: "POST",
+    headers: {
+      "content-type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      max_tokens: 1536,
+      output_config: { effort: "low" },
+      messages: [{ role: "user", content: userContent }],
+    }),
+  });
+
+  if (!res.ok) throw new Error(`Anthropic API ${res.status}: ${await res.text()}`);
+  const data = await res.json();
+  const block = data.content?.find((b: { type: string }) => b.type === "text");
+  return block?.text ?? "";
+}
