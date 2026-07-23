@@ -48,7 +48,7 @@ create table devices (
   platform      platform_kind not null,
   device_name   text,
   -- token opaco usado pelo app do aparelho para postar eventos (via função ingest)
-  device_token  text unique not null default encode(gen_random_bytes(24), 'hex'),
+  device_token  text unique not null default encode(sha256(convert_to(gen_random_uuid()::text || clock_timestamp()::text, 'UTF8')), 'hex'),
   pairing_code  text,                 -- código de 6 dígitos exibido no pareamento
   paired_at     timestamptz,
   last_seen_at  timestamptz,

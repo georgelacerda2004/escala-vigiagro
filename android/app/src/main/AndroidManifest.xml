@@ -52,7 +52,7 @@
             android:exported="false"
             android:foregroundServiceType="mediaProjection" />
 
-        <!-- Push (FCM): recebe token e notificações de alerta. -->
+        <!-- Push (FCM) — comentado até configurar Firebase
         <service
             android:name=".KidsGuardMessagingService"
             android:exported="false">
@@ -60,6 +60,7 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        -->
 
         <!-- Reinício após boot: avisa para retomar o monitor do Roblox. -->
         <receiver
