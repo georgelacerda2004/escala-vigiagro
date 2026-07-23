@@ -14,6 +14,7 @@ import android.provider.Settings
 import android.text.TextUtils
 import android.view.accessibility.AccessibilityManager
 import android.widget.Button
+import android.widget.CheckBox
 import android.widget.EditText
 import android.widget.TextView
 import android.widget.Toast
@@ -65,10 +66,17 @@ class MainActivity : AppCompatActivity() {
         val btnRoblox = findViewById<Button>(R.id.btnStartRoblox)
         val btnProtect = findViewById<Button>(R.id.btnProtect)
         val btnNotifAccess = findViewById<Button>(R.id.btnNotifAccess)
+        val cbConsent = findViewById<CheckBox>(R.id.cbConsent)
         val statusPairing = findViewById<TextView>(R.id.statusPairing)
+
+        // Consentimento do responsável (LGPD + política do Google Play).
+        // Restaura o estado salvo e persiste qualquer alteração no aparelho.
+        cbConsent.isChecked = Prefs.hasConsent(this)
+        cbConsent.setOnCheckedChangeListener { _, checked -> Prefs.setConsent(this, checked) }
 
         // acesso a notificações (complemento: DMs do Roblox + outros apps)
         btnNotifAccess.setOnClickListener {
+            if (!requireConsent()) return@setOnClickListener
             startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
         }
 
@@ -119,11 +127,13 @@ class MainActivity : AppCompatActivity() {
 
         // abre as configurações de Acessibilidade para o usuário ligar o serviço
         btnA11y.setOnClickListener {
+            if (!requireConsent()) return@setOnClickListener
             startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS))
         }
 
         // inicia o monitor do Roblox: exige "acesso de uso" + captura de tela
         btnRoblox.setOnClickListener {
+            if (!requireConsent()) return@setOnClickListener
             if (!Prefs.isPaired(this)) {
                 Toast.makeText(this, R.string.status_not_paired, Toast.LENGTH_SHORT).show()
                 return@setOnClickListener
@@ -138,6 +148,16 @@ class MainActivity : AppCompatActivity() {
             val mpm = getSystemService(Context.MEDIA_PROJECTION_SERVICE) as MediaProjectionManager
             projectionLauncher.launch(mpm.createScreenCaptureIntent())
         }
+    }
+
+    /**
+     * Garante o consentimento do responsável antes de ativar qualquer monitor.
+     * Sem o aceite, nenhum serviço de captura pode ser ligado (LGPD + Google Play).
+     */
+    private fun requireConsent(): Boolean {
+        if (Prefs.hasConsent(this)) return true
+        Toast.makeText(this, R.string.consent_required, Toast.LENGTH_LONG).show()
+        return false
     }
 
     /** O KidsGuard tem permissão de "acesso de uso" (PACKAGE_USAGE_STATS)? */
