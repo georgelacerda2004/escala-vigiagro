@@ -41,6 +41,30 @@ não por componentes nativos do Android. Logo, a única forma de ler o chat é
 - Notificação do Foreground Service: no Android 13+ pode exigir a permissão
   `POST_NOTIFICATIONS` concedida em runtime para aparecer.
 
+## Refinos v7 (com base em dados reais)
+
+A esteira comprovadamente funciona (um chat real virou alerta grooming/critical). O
+desafio é que **o chat do Roblox se auto-oculta** em segundos, então nem todo frame o
+contém. Melhorias no `ScreenCaptureService`:
+- **2 passadas de OCR por frame:** frame inteiro + **recorte da faixa esquerda do chat**
+  pré-processado (escala de cinza + contraste + upscale 2x) → lê melhor o texto fraco.
+- **Amostragem a cada 2s** (janela curta de visibilidade).
+- **Visão do Claude por cadência (~60s)** enquanto o Roblox está ativo (antes só disparava
+  com OCR fraco — não disparava porque o OCR lia a UI do jogo). É a rede de segurança
+  confiável (opt-in `vision_enabled` + rate-limit).
+
+**Verdade honesta:** captura por tela **nunca é 100%** (o chat some sozinho). O combo
+maximiza a detecção; o **backstop de segurança** é restringir/desligar o chat pelos
+**controles parentais oficiais do Roblox** (ver seção abaixo).
+
+## Canal complementar: NotificationListenerService
+
+`MonitorNotificationListenerService` lê **notificações** de apps monitorados (DMs do
+Roblox em segundo plano, e mensagens de WhatsApp/Instagram/Discord/Telegram/Messenger),
+aplica o pré-filtro e envia à `ingest` (`event_type=notification`). **Não** captura o
+chat ao vivo dentro do jogo (isso é o OCR/visão) — é um reforço confiável e barato para
+o que vira notificação. Requer o usuário conceder "Acesso a notificações".
+
 ## Escalonamento por visão (Fase 2.1) ✅ construído
 
 Para os casos que o OCR erra, o frame vai ao **Claude com visão**:
