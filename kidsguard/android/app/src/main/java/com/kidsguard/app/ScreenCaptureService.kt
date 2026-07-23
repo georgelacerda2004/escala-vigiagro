@@ -9,7 +9,12 @@ import android.app.usage.UsageStatsManager
 import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
+import android.graphics.Canvas
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
+import android.graphics.Paint
 import android.graphics.PixelFormat
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
 import android.hardware.display.VirtualDisplay
 import android.media.ImageReader
@@ -31,14 +36,14 @@ import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 
 /**
  * Foreground Service que segura o MediaProjection e, ENQUANTO o Roblox está em
- * primeiro plano, tira 1 screenshot a cada ~3s, roda OCR (ML Kit, offline) e envia
- * o texto do chat para a `ingest` (mesma esteira do YouTube).
+ * primeiro plano, tira 1 screenshot a cada ~2s e extrai texto por 2 caminhos:
+ *   (a) OCR do frame inteiro (ML Kit);
+ *   (b) OCR de um RECORTE da região do chat, pré-processado (cinza+contraste+upscale);
+ * e, por cadência (~60s), envia o frame ao Claude-visão (mais confiável que o OCR para
+ * o chat semitransparente do Roblox). Só sobe o que passa no pré-filtro.
  *
- * Detecção de foreground: usa UsageStatsManager (confiável), pois o Roblox quase não
- * emite eventos de acessibilidade. O "ping" do a11y é mantido como reforço.
- *
- * Privacidade: a imagem é processada e DESCARTADA na hora — nada é guardado. Só sobe
- * para a nuvem o texto que passa no pré-filtro.
+ * Detecção de foreground via UsageStatsManager (o Roblox quase não emite eventos de a11y).
+ * Privacidade: imagem processada e DESCARTADA na hora — nada é guardado.
  */
 class ScreenCaptureService : Service() {
 
@@ -46,16 +51,15 @@ class ScreenCaptureService : Service() {
         private const val TAG = "KidsGuard/Capture"
         private const val CHANNEL_ID = "kidsguard_capture"
         private const val NOTIF_ID = 42
-        private const val SAMPLE_INTERVAL_MS = 3000L
+        private const val SAMPLE_INTERVAL_MS = 2000L
         private const val ROBLOX_STALE_MS = 15000L   // reforço via ping do a11y
-        private const val VISION_INTERVAL_MS = 60000L // no máx. 1 escalonamento/min (custo)
-        private const val WEAK_OCR_CHARS = 15         // OCR "fraco" = provável falha de leitura
+        private const val VISION_INTERVAL_MS = 60000L // cadência da visão (1x/min)
         private const val ROBLOX_PKG = "com.roblox.client"
+        private const val CHAT_WIDTH_FRACTION = 0.55f // faixa esquerda (onde fica o chat)
 
         const val EXTRA_RESULT_CODE = "result_code"
         const val EXTRA_RESULT_DATA = "result_data"
 
-        // Reforço vindo do AccessibilityService.
         @Volatile private var lastRobloxPingMs = 0L
         fun pingRobloxForeground() { lastRobloxPingMs = SystemClock.elapsedRealtime() }
         private fun pingFresh(): Boolean =
@@ -67,7 +71,7 @@ class ScreenCaptureService : Service() {
     private var imageReader: ImageReader? = null
     private val handler = Handler(Looper.getMainLooper())
     private val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
-    private val recentLines = ArrayDeque<String>()   // dedup das últimas linhas enviadas
+    private val recentLines = ArrayDeque<String>()
     private var lastVisionMs = 0L
     private var width = 0
     private var height = 0
@@ -102,8 +106,7 @@ class ScreenCaptureService : Service() {
         val metrics = DisplayMetrics()
         val wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         @Suppress("DEPRECATION") wm.defaultDisplay.getRealMetrics(metrics)
-        // Resolução CHEIA — o texto do chat do Roblox é pequeno; reduzir atrapalha o OCR.
-        width = metrics.widthPixels
+        width = metrics.widthPixels     // resolução CHEIA (texto do chat é pequeno)
         height = metrics.heightPixels
         dpi = metrics.densityDpi
 
@@ -115,7 +118,6 @@ class ScreenCaptureService : Service() {
         )
     }
 
-    /** App atualmente em foreground segundo o UsageStats (null se sem permissão/dado). */
     private fun currentForegroundApp(): String? {
         return try {
             val usm = getSystemService(Context.USAGE_STATS_SERVICE) as UsageStatsManager
@@ -133,7 +135,6 @@ class ScreenCaptureService : Service() {
 
     private fun robloxActive(): Boolean {
         val fg = currentForegroundApp()
-        // Se o UsageStats respondeu, ele manda; senão, cai no reforço do ping do a11y.
         val active = if (fg != null) fg == ROBLOX_PKG else pingFresh()
         Log.d(TAG, "tick foreground=${fg ?: "?"} robloxActive=$active")
         return active
@@ -151,19 +152,31 @@ class ScreenCaptureService : Service() {
         if (image == null) { Log.d(TAG, "sem frame disponível"); return }
         try {
             val plane = image.planes[0]
-            val rowStride = plane.rowStride
             val pixelStride = plane.pixelStride
-            val rowPadding = rowStride - pixelStride * width
+            val rowPadding = plane.rowStride - pixelStride * width
             val bmp = Bitmap.createBitmap(
                 width + rowPadding / pixelStride, height, Bitmap.Config.ARGB_8888
             )
             bmp.copyPixelsFromBuffer(plane.buffer)
 
+            // (a) OCR do frame inteiro
             recognizer.process(InputImage.fromBitmap(bmp, 0))
-                .addOnSuccessListener { result ->
-                    Log.d(TAG, "OCR len=${result.text.length}")
-                    handleOcr(result.text)
-                    maybeEscalateToVision(result.text, bmp)
+                .addOnSuccessListener { r ->
+                    Log.d(TAG, "OCR(frame) len=${r.text.length}")
+                    handleOcr(r.text)
+
+                    // (b) OCR do recorte do chat pré-processado
+                    try {
+                        val crop = preprocessChatCrop(bmp)
+                        recognizer.process(InputImage.fromBitmap(crop, 0))
+                            .addOnSuccessListener { r2 ->
+                                Log.d(TAG, "OCR(recorte) len=${r2.text.length}")
+                                handleOcr(r2.text)
+                            }
+                    } catch (e: Exception) { Log.w(TAG, "pré-processo falhou: ${e.message}") }
+
+                    // (c) visão por cadência (rede de segurança)
+                    maybeSendVision(bmp)
                 }
                 .addOnFailureListener { e -> Log.w(TAG, "OCR falhou: ${e.message}") }
         } catch (e: Exception) {
@@ -173,6 +186,30 @@ class ScreenCaptureService : Service() {
         }
     }
 
+    /** Recorta a faixa esquerda (chat), aplica cinza+contraste e amplia 2x — melhora o OCR. */
+    private fun preprocessChatCrop(src: Bitmap): Bitmap {
+        val cropW = (src.width * CHAT_WIDTH_FRACTION).toInt().coerceIn(1, src.width)
+        val scale = 2.0f
+        val out = Bitmap.createBitmap(
+            (cropW * scale).toInt().coerceAtLeast(1),
+            (src.height * scale).toInt().coerceAtLeast(1),
+            Bitmap.Config.ARGB_8888
+        )
+        val cm = ColorMatrix().apply { setSaturation(0f) } // escala de cinza
+        val c = 1.6f; val t = (-0.5f * c + 0.5f) * 255f     // contraste
+        cm.postConcat(ColorMatrix(floatArrayOf(
+            c, 0f, 0f, 0f, t,
+            0f, c, 0f, 0f, t,
+            0f, 0f, c, 0f, t,
+            0f, 0f, 0f, 1f, 0f,
+        )))
+        val paint = Paint().apply { colorFilter = ColorMatrixColorFilter(cm); isFilterBitmap = true }
+        Canvas(out).drawBitmap(
+            src, Rect(0, 0, cropW, src.height), Rect(0, 0, out.width, out.height), paint
+        )
+        return out
+    }
+
     private fun handleOcr(text: String) {
         if (text.isBlank()) return
         for (raw in text.split("\n")) {
@@ -180,32 +217,28 @@ class ScreenCaptureService : Service() {
             if (line.length < 4) continue
             if (recentLines.contains(line)) continue
             recentLines.addLast(line)
-            if (recentLines.size > 40) recentLines.removeFirst()
+            if (recentLines.size > 60) recentLines.removeFirst()
 
             if (Prefilter.isSuspicious(line)) {
                 Log.d(TAG, "Chat suspeito (OCR): '$line'")
-                ApiClient.sendEvent(
-                    this, app = "roblox", eventType = "chat", contentText = line,
-                )
+                ApiClient.sendEvent(this, app = "roblox", eventType = "chat", contentText = line)
             }
         }
     }
 
     /**
-     * Reforço por visão: quando o OCR leu POUCO texto (provável chat gráfico que ele
-     * não decifra), envia o frame ao Claude-visão. Rate-limit de 1x/min para conter custo.
+     * Rede de segurança: a cada ~60s (enquanto o Roblox está ativo) envia o frame ao
+     * Claude-visão, que lê o chat que o ML Kit não decifra. Opt-in + rate-limit no servidor.
      */
-    private fun maybeEscalateToVision(ocrText: String, bmp: Bitmap) {
-        if (ocrText.trim().length >= WEAK_OCR_CHARS) return
+    private fun maybeSendVision(bmp: Bitmap) {
         val now = SystemClock.elapsedRealtime()
         if (now - lastVisionMs < VISION_INTERVAL_MS) return
         lastVisionMs = now
-
         try {
             val out = ByteArrayOutputStream()
             bmp.compress(Bitmap.CompressFormat.JPEG, 70, out)
             val base64 = Base64.encodeToString(out.toByteArray(), Base64.NO_WRAP)
-            Log.d(TAG, "OCR fraco → escalonando para visão do Claude.")
+            Log.d(TAG, "Enviando frame para a visão do Claude (cadência).")
             ApiClient.sendImage(this, base64, "image/jpeg")
         } catch (e: Exception) {
             Log.w(TAG, "Falha ao preparar imagem: ${e.message}")

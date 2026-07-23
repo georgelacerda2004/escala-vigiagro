@@ -114,9 +114,16 @@
             android:layout_marginVertical="24dp" />
 
         <Button
+            android:id="@+id/btnNotifAccess"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/btn_notif_access" />
+
+        <Button
             android:id="@+id/btnProtect"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="@string/btn_protect" />
+            android:text="@string/btn_protect"
+            android:layout_marginTop="8dp" />
     </LinearLayout>
 </ScrollView>

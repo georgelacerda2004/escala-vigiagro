@@ -64,7 +64,13 @@ class MainActivity : AppCompatActivity() {
         val btnA11y = findViewById<Button>(R.id.btnOpenAccessibility)
         val btnRoblox = findViewById<Button>(R.id.btnStartRoblox)
         val btnProtect = findViewById<Button>(R.id.btnProtect)
+        val btnNotifAccess = findViewById<Button>(R.id.btnNotifAccess)
         val statusPairing = findViewById<TextView>(R.id.statusPairing)
+
+        // acesso a notificações (complemento: DMs do Roblox + outros apps)
+        btnNotifAccess.setOnClickListener {
+            startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+        }
 
         // Android 13+: pede permissão de notificação (para push e avisos).
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
