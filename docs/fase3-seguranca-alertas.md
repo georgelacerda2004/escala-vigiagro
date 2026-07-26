@@ -22,8 +22,8 @@
 ## Deploy (Hermes)
 
 ```bash
-cd escala-vigiagro && git pull origin claude/kids-monitoring-youtube-roblox-7wnlwm
-cd kidsguard/backend
+cd kidsguard && git pull
+cd backend
 
 supabase db push                          # migrations 0003, 0004, 0005
 supabase functions deploy classify-image notify

@@ -17,7 +17,7 @@ classifica e gera alertas/resumos. Também detecta texto suspeito visível na te
 
 ## Rodar (Android Studio)
 
-1. Abra a pasta `kidsguard/android/` no **Android Studio** (ele baixa o Gradle/deps).
+1. Abra a pasta `android/` no **Android Studio** (ele baixa o Gradle/deps).
 2. Rode em um **aparelho/emulador Android** (min. Android 8 / API 26).
 3. Na tela do app, **pareie** de uma das formas:
    - **📷 Escanear QR** — no painel web (`/criancas`), crie a criança/aparelho e

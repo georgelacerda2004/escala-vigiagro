@@ -6,8 +6,8 @@ ponta a ponta no projeto `rgrhfiviaedpdlbchjyu`.
 ## 1. Atualizar e publicar tudo
 
 ```bash
-cd escala-vigiagro && git pull origin claude/kids-monitoring-youtube-roblox-7wnlwm
-cd kidsguard/backend
+cd kidsguard && git pull
+cd backend
 
 supabase db push        # migrations 0001..0007
 supabase functions deploy ingest classify classify-image summarize notify \
@@ -75,7 +75,7 @@ npm run dev
 
 ## 5. App Android (aparelho real)
 
-Abrir `kidsguard/android/` no Android Studio.
+Abrir `android/` no Android Studio.
 - **Sem Firebase ainda?** comente as 2 linhas do plugin `com.google.gms.google-services`
   nos `build.gradle.kts` para compilar sem push. Com push: siga `docs/push-fcm.md`.
 - Parear via **QR** (do `/criancas`) ou manual.

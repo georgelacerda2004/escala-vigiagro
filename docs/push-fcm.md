@@ -8,7 +8,7 @@ Push exige um projeto Firebase (grátis). Passos:
 
 1. Crie um projeto em https://console.firebase.google.com.
 2. **Adicione um app Android** com o pacote `com.kidsguard.app`.
-3. Baixe o **`google-services.json`** e coloque em `kidsguard/android/app/`.
+3. Baixe o **`google-services.json`** e coloque em `android/app/`.
    - Sem esse arquivo o app **não compila com push** (comente as linhas do plugin
      `com.google.gms.google-services` nos `build.gradle.kts` para buildar sem push).
 4. Em **Project Settings → Service accounts → Generate new private key**: baixa um

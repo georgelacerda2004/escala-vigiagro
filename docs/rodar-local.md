@@ -12,7 +12,7 @@ aí sim sobe para um projeto Supabase novo e dedicado.
 ## Passo a passo
 
 ```bash
-cd kidsguard/backend
+cd backend
 
 # 1. sobe o stack local (Postgres, Auth, Storage, etc.)
 supabase start
