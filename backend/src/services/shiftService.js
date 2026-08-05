@@ -1,5 +1,13 @@
 import { prisma } from '../config/prisma.js';
-import { shiftWindow, regimeOf, next21, next09, is12h } from './shiftRules.js';
+import {
+  shiftWindow,
+  regimeOf,
+  next21,
+  next09,
+  is12h,
+  isComercialType,
+  isComercialPerson,
+} from './shiftRules.js';
 
 const ABSENT = new Set(['f', 'l', 'v', 'c']); // ferias / licenca / viagem / compromisso
 
@@ -17,14 +25,17 @@ function ymd(d) {
 function isRealShift(a) {
   if (!a) return false;
   if (a.hours && a.hours > 0) return true;
+  if (isComercialType(a.shiftType)) return true;
   return !ABSENT.has(a.shiftType?.code);
 }
 
 // Acrescenta regime/horario/sigla a uma atribuicao.
 function enrich(a) {
-  const w = shiftWindow(a.person.name, a.date);
+  const w = shiftWindow(a.person.name, a.date, a.shiftType);
   const code = (a.shiftType?.code || a.rawValue || '').toLowerCase();
-  const ausente = ABSENT.has(code);
+  // Dia COMERCIAL nunca e ausencia, mesmo que a sigla coincida com uma de
+  // ausencia (ex.: "c").
+  const ausente = !isComercialType(a.shiftType) && ABSENT.has(code);
   return {
     id: a.id,
     date: ymd(a.date), // string YYYY-MM-DD (sem fuso)
@@ -161,10 +172,16 @@ export async function dashboardSummary() {
     .filter((r) => r.regime === '24h' && !isK9(r) && r.inicio.getTime() === proxTroca.getTime())
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
-  // 12h (Damata/Tiago) que iniciam na proxima manha 09h BRT
+  // Quem inicia na proxima manha 09h BRT: 12h (Damata/Tiago) e comercial
+  // (dias na cor preta, ex.: Ary e Isaac — saem as 19h).
   const prox09 = next09(now);
   const entram09h = reais
-    .filter((r) => r.regime === '12h' && !isK9(r) && r.inicio.getTime() === prox09.getTime())
+    .filter(
+      (r) =>
+        (r.regime === '12h' || r.regime === 'Comercial') &&
+        !isK9(r) &&
+        r.inicio.getTime() === prox09.getTime()
+    )
     .sort((a, b) => a.pessoa.localeCompare(b.pessoa));
 
   // Servidores K9 escalados hoje (sem horario de troca, regime distinto).
@@ -253,7 +270,7 @@ export async function calendarMonth(personId, month) {
       dow: dows[dateUTC.getUTCDay()],
     };
     if (a && isRealShift(a)) {
-      const w = shiftWindow(person.name, a.date);
+      const w = shiftWindow(person.name, a.date, a.shiftType);
       totalHoras += a.hours || 0;
       diasTrabalhados += 1;
       days.push({
@@ -287,7 +304,11 @@ export async function calendarMonth(personId, month) {
       nome: person.name,
       sigla: person.team?.sigla || null,
       funcao: person.team?.descricao || null,
-      regime: is12h(person.name) ? '12h' : '24h',
+      regime: is12h(person.name)
+        ? '12h'
+        : isComercialPerson(person.name, lo)
+          ? 'Comercial'
+          : '24h',
     },
     month: `${year}-${String(mon).padStart(2, '0')}`,
     year,

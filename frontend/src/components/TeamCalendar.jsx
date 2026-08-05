@@ -35,6 +35,7 @@ function k9Operators(list) {
 
 function Chip({ p, small }) {
   const is12 = p.regime === '12h';
+  const isComercial = p.regime === 'Comercial';
   if (p.ausente) {
     return (
       <span
@@ -52,12 +53,13 @@ function Chip({ p, small }) {
       className={`block truncate rounded px-1 ${small ? 'text-[10px] leading-4' : 'text-[11px] leading-5'} font-medium`}
       style={{
         backgroundColor: (p.cor || '#94a3b8') + '33',
-        borderLeft: `3px solid ${is12 ? '#d97706' : p.cor || '#1f7a3d'}`,
+        borderLeft: `3px solid ${is12 ? '#d97706' : isComercial ? '#334155' : p.cor || '#1f7a3d'}`,
       }}
     >
       {p.pessoa}
       {p.sigla ? <span className="opacity-60"> · {p.sigla}</span> : null}
       {is12 ? <b className="text-amber-600"> 12h</b> : null}
+      {isComercial ? <b className="text-slate-600 dark:text-slate-300"> 09h–19h</b> : null}
     </span>
   );
 }
