@@ -230,21 +230,19 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Detalhes do dia selecionado */}
+      {/* Detalhes do dia selecionado — so aparece ao clicar em um dia do
+          calendario (o dia de hoje ja e coberto por "Em plantao agora"). */}
+      {!isSelectedToday && (
       <div id="detalhes-dia" className="card border-l-4 border-amber-500">
         <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <h2 className="text-lg font-bold capitalize">
-              {isSelectedToday ? `Hoje · ${selectedLabel}` : selectedLabel}
-            </h2>
-            {!isSelectedToday && (
-              <button
-                className="rounded-full bg-slate-100 px-2 py-0.5 text-xs hover:bg-brand-100 dark:bg-slate-800 dark:hover:bg-brand-900"
-                onClick={() => setSelectedDate(dayjs().format('YYYY-MM-DD'))}
-              >
-                ← voltar p/ hoje
-              </button>
-            )}
+            <h2 className="text-lg font-bold capitalize">{selectedLabel}</h2>
+            <button
+              className="rounded-full bg-slate-100 px-2 py-0.5 text-xs hover:bg-brand-100 dark:bg-slate-800 dark:hover:bg-brand-900"
+              onClick={() => setSelectedDate(dayjs().format('YYYY-MM-DD'))}
+            >
+              ✕ fechar
+            </button>
           </div>
           <span className="text-xs text-slate-400">
             clique em outro dia abaixo para trocar
@@ -316,6 +314,7 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+      )}
 
       {/* Calendario da equipe */}
       <div className="card">
