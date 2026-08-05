@@ -1,5 +1,13 @@
 import { prisma } from '../config/prisma.js';
-import { shiftWindow, regimeOf, next21, next09, is12h, isComercialType } from './shiftRules.js';
+import {
+  shiftWindow,
+  regimeOf,
+  next21,
+  next09,
+  is12h,
+  isComercialType,
+  isComercialPerson,
+} from './shiftRules.js';
 
 const ABSENT = new Set(['f', 'l', 'v', 'c']); // ferias / licenca / viagem / compromisso
 
@@ -296,7 +304,11 @@ export async function calendarMonth(personId, month) {
       nome: person.name,
       sigla: person.team?.sigla || null,
       funcao: person.team?.descricao || null,
-      regime: is12h(person.name) ? '12h' : '24h',
+      regime: is12h(person.name)
+        ? '12h'
+        : isComercialPerson(person.name, lo)
+          ? 'Comercial'
+          : '24h',
     },
     month: `${year}-${String(mon).padStart(2, '0')}`,
     year,

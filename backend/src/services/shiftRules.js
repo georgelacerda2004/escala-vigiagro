@@ -2,8 +2,9 @@
 //
 // - DA MATTA e TIAGO (Damata/Tiago): escala de 12h -> 09:00 ate 21:00 do
 //   proprio dia marcado na escala.
-// - Dias marcados com o tipo COMERCIAL da legenda (celulas na cor preta,
-//   ex.: Ary e Isaac): expediente comercial -> 09:00 ate 19:00 do proprio dia.
+// - Dias marcados com o tipo COMERCIAL da legenda (celulas na cor preta)
+//   e ARY/ISAAC ate AGO/2026: expediente comercial -> 09:00 ate 19:00 do
+//   proprio dia. A partir de SET/2026 Ary e Isaac passam para a escala 24h.
 // - Demais servidores: escala de 24h -> inicia 21:00 do dia ANTERIOR ao dia
 //   marcado e termina 21:00 do dia marcado.
 
@@ -23,6 +24,17 @@ export function is12h(personName) {
 
 export function regimeOf(personName) {
   return is12h(personName) ? '12h' : '24h';
+}
+
+// Servidores em horario comercial (09h-19h) durante AGO/2026; a partir de
+// 01/09/2026 entram na escala de 24h automaticamente.
+const COMERCIAL_NAMES = new Set(['ARY', 'ARI', 'ISAAC', 'ISAC']);
+const COMERCIAL_UNTIL = Date.UTC(2026, 8, 1); // exclusivo: 01/09/2026
+
+export function isComercialPerson(personName, dateUTC) {
+  if (!COMERCIAL_NAMES.has(strip(personName))) return false;
+  if (!dateUTC) return false;
+  return dateUTC.getTime() < COMERCIAL_UNTIL;
 }
 
 // Tipo de turno "COMERCIAL" da legenda: identificado pelo rotulo ou pela
@@ -61,9 +73,9 @@ function localAt(dateUTC, day, hour) {
  * @returns {{regime:string,start:Date,end:Date,horario:string}}
  */
 export function shiftWindow(personName, dateUTC, shiftType) {
-  // Dia marcado como COMERCIAL na legenda vale para qualquer servidor e
-  // tem precedencia sobre a regra por nome.
-  if (isComercialType(shiftType)) {
+  // Dia marcado como COMERCIAL na legenda vale para qualquer servidor;
+  // Ary/Isaac ficam no comercial ate AGO/2026 mesmo sem marca na legenda.
+  if (isComercialType(shiftType) || isComercialPerson(personName, dateUTC)) {
     return {
       regime: 'Comercial',
       start: localAt(dateUTC, 0, 9),

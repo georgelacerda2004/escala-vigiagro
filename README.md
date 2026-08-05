@@ -36,8 +36,10 @@ perfis, logs e backup automático.
 ### Regras de plantão implementadas
 
 - **12h** (apenas **Damata** e **Tiago**): 09h → 21h do mesmo dia.
-- **Comercial** (dias marcados na **cor preta** — tipo `COMERCIAL` da
-  legenda, ex.: **Ary** e **Isaac**): 09h → 19h do mesmo dia.
+- **Comercial** (09h → 19h do mesmo dia): dias marcados na **cor preta**
+  (tipo `COMERCIAL` da legenda) e **Ary**/**Isaac** durante **ago/2026**.
+  A partir de **set/2026** Ary e Isaac passam automaticamente para a
+  escala de 24h.
 - **24h** (demais): o dia marcado é o **início** — 21h do dia marcado →
   21h do **dia seguinte**.
 - Dashboard mostra **Plantão atual** e **Entram às 21h** em tempo real.
