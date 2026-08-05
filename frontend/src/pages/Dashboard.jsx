@@ -9,18 +9,23 @@ import TeamCalendar from '../components/TeamCalendar.jsx';
 
 function PersonChip({ p }) {
   const is12 = p.regime === '12h';
+  const isComercial = p.regime === 'Comercial';
   return (
     <span
       className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-medium ${
         is12
           ? 'bg-amber-100 text-amber-800 ring-1 ring-amber-300'
-          : 'bg-brand-100 text-brand-800 ring-1 ring-brand-500/30'
+          : isComercial
+            ? 'bg-slate-200 text-slate-800 ring-1 ring-slate-400 dark:bg-slate-700 dark:text-slate-100'
+            : 'bg-brand-100 text-brand-800 ring-1 ring-brand-500/30'
       }`}
       title={`${p.funcao || ''} · ${p.horario}`}
     >
       {p.pessoa}
       {p.sigla && <span className="text-xs opacity-70">{p.sigla}</span>}
-      <span className="rounded bg-black/10 px-1 text-[10px] font-bold">{is12 ? '12h' : '24h'}</span>
+      <span className="rounded bg-black/10 px-1 text-[10px] font-bold dark:bg-white/10">
+        {is12 ? '12h' : isComercial ? '09h–19h' : '24h'}
+      </span>
     </span>
   );
 }
@@ -218,8 +223,9 @@ export default function Dashboard() {
         )}
         {sum?.entram09h?.length > 0 && (
           <p className="mt-3 text-xs text-slate-500">
-            Turno 12h (Damata/Tiago) — {dayjs().hour() >= 9 ? 'amanhã' : 'hoje'} às 09h:{' '}
-            <b>{listNames(sum.entram09h)}</b> (sai às 21h).
+            Entram às 09h ({dayjs().hour() >= 9 ? 'amanhã' : 'hoje'}):{' '}
+            <b>{listNames(sum.entram09h)}</b> — turno 12h sai às 21h; horário
+            comercial sai às 19h.
           </p>
         )}
       </div>
@@ -370,7 +376,8 @@ export default function Dashboard() {
         )}
         <p className="mt-3 text-[11px] text-slate-400">
           Cada dia mostra quem entra de plantão naquele dia. 24h: inicia 21h e
-          sai 21h do dia seguinte. 12h (Damata/Tiago): 09h–21h.
+          sai 21h do dia seguinte. 12h (Damata/Tiago): 09h–21h. Horário
+          comercial (dias na cor preta): 09h–19h.
         </p>
       </div>
     </div>

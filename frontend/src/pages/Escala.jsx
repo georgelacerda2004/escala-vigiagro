@@ -309,7 +309,7 @@ export default function Escala() {
                       </td>
                       <td className="td">
                         <span
-                          className={`rounded px-1.5 py-0.5 text-xs font-bold ${i.regime === '12h' ? 'bg-amber-100 text-amber-800' : 'bg-brand-100 text-brand-800'}`}
+                          className={`rounded px-1.5 py-0.5 text-xs font-bold ${i.regime === '12h' ? 'bg-amber-100 text-amber-800' : i.regime === 'Comercial' ? 'bg-slate-700 text-white' : 'bg-brand-100 text-brand-800'}`}
                         >
                           {i.regime || '-'}
                         </span>

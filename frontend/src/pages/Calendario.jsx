@@ -153,7 +153,9 @@ export default function Calendario() {
                           className={`mt-1 inline-block rounded px-1 text-[9px] font-bold ${
                             c.regime === '12h'
                               ? 'bg-amber-200 text-amber-900'
-                              : 'bg-brand-200 text-brand-900'
+                              : c.regime === 'Comercial'
+                                ? 'bg-slate-700 text-white'
+                                : 'bg-brand-200 text-brand-900'
                           }`}
                         >
                           {c.regime}
